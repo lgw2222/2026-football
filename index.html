@@ -88,11 +88,11 @@ select option{background:var(--bg3);}
 .traded-flag{font-size:10px;font-family:var(--fh);font-weight:700;letter-spacing:.5px;color:var(--accent);}
 #pm-scrim{position:fixed;inset:0;z-index:400;display:none;}
 #pm-scrim.open{display:block;}
-#pm{position:fixed;z-index:401;width:340px;max-width:calc(100vw - 24px);background:var(--bg2);border:1px solid var(--border2);border-radius:12px;box-shadow:0 16px 44px rgba(0,0,0,.65);display:none;overflow:hidden;animation:pmIn .14s ease;}
+#pm{position:fixed;z-index:401;width:420px;max-width:calc(100vw - 24px);background:var(--bg2);border:1px solid var(--border2);border-radius:12px;box-shadow:0 16px 44px rgba(0,0,0,.65);display:none;overflow:hidden;animation:pmIn .14s ease;}
 #pm.open{display:block;}
 @keyframes pmIn{from{opacity:0;transform:translateY(6px) scale(.985);}to{opacity:1;transform:none;}}
 .pm-top{display:flex;gap:11px;padding:13px 14px;border-bottom:1px solid var(--border);align-items:flex-start;}
-.pm-shot,.pm-shot-fb{width:52px;height:52px;border-radius:8px;flex-shrink:0;border:1px solid var(--border2);background:var(--bg4);}
+.pm-shot,.pm-shot-fb{width:62px;height:62px;border-radius:8px;flex-shrink:0;border:1px solid var(--border2);background:var(--bg4);}
 .pm-shot{object-fit:cover;}
 .pm-shot-fb{display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-size:18px;font-weight:900;color:var(--text3);}
 .pm-name{font-family:var(--fh);font-size:19px;font-weight:900;text-transform:uppercase;line-height:1.05;letter-spacing:.3px;}
@@ -103,7 +103,7 @@ select option{background:var(--bg3);}
 .pm-rk{flex:1;text-align:center;}
 .pm-rk-v{font-family:var(--fh);font-size:19px;font-weight:900;color:var(--accent);line-height:1;}
 .pm-rk-l{font-size:8.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
-.pm-body{padding:12px 14px;max-height:46vh;overflow-y:auto;}
+.pm-body{padding:12px 14px;max-height:52vh;overflow-y:auto;}
 .pm-body::-webkit-scrollbar{width:3px;}
 .pm-body::-webkit-scrollbar-thumb{background:var(--bg4);}
 .pm-h{font-family:var(--fh);font-size:9.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin:12px 0 6px;}
@@ -122,6 +122,15 @@ select option{background:var(--bg3);}
 .pm-muted{font-size:11px;color:var(--text3);line-height:1.55;}
 .pm-load{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2);}
 .pm-spin{width:11px;height:11px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+.pm-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);}
+.pm-tab{flex:1;padding:8px 4px;text-align:center;font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;}
+.pm-tab:hover{color:var(--text2);}
+.pm-tab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.pm-bio{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:4px;}
+.pm-bio-i{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 3px;text-align:center;}
+.pm-bio-v{font-family:var(--fh);font-size:14px;font-weight:900;line-height:1.1;}
+.pm-bio-l{font-size:8px;color:var(--text2);text-transform:uppercase;margin-top:2px;}
+.pm-ext{font-size:9px;color:var(--text3);margin-top:8px;line-height:1.5;}
 .rank-chip{display:inline-block;font-family:var(--fh);font-size:10px;font-weight:900;color:var(--accent);background:rgba(232,160,32,.12);border:1px solid rgba(232,160,32,.3);border-radius:3px;padding:1px 5px;margin-left:5px;}
 .udfa-tag{display:inline-block;font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.5px;padding:1px 6px;border-radius:3px;background:rgba(138,146,168,.15);color:var(--text2);border:1px solid var(--border2);}
 .plinks{display:flex;gap:4px;flex-shrink:0;}
@@ -604,6 +613,7 @@ function updateTradeSummary(){
 
 // ===== PLAYER DETAIL PANEL =====
 const espnCache = {};
+let PMP = null, PMTAB = 'overview', SLEEPER = null;
 
 function allPlayers(){ return (DS && DS.rookies) ? DS.rookies : L.rookies; }
 
@@ -616,9 +626,9 @@ function slotText(p){
 function openPlayer(id, ev){
   const p = allPlayers().find(x => x.id === id);
   if(!p) return;
+  PMP = p; PMTAB = 'overview';
   const pm = document.getElementById('pm');
   const initials = p.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  const q = encodeURIComponent(p.name + ' NFL');
   pm.innerHTML = `
     <div class="pm-top">
       <div id="pm-shot-wrap"><div class="pm-shot-fb">${initials}</div></div>
@@ -634,22 +644,83 @@ function openPlayer(id, ev){
       <div class="pm-rk"><div class="pm-rk-v">${p.pr}</div><div class="pm-rk-l">Position rank</div></div>
       <div class="pm-rk"><div class="pm-rk-v">${p.udfa?'UDFA':(p.su?'—':p.pk)}</div><div class="pm-rk-l">NFL pick</div></div>
     </div>` : ''}
-    <div class="pm-body">
-      <div id="pm-live"><div class="pm-load"><span class="pm-spin"></span> Loading stats &amp; news&hellip;</div></div>
-      <div class="pm-h">More</div>
-      <div class="pm-links">
-        ${p.cfb ? `<a class="pm-link" href="${p.cfb}" target="_blank" rel="noopener">College</a>` : ''}
-        ${p.pfr ? `<a class="pm-link" href="${p.pfr}" target="_blank" rel="noopener">Pro stats</a>` : ''}
-        <a class="pm-link" href="https://news.google.com/search?q=${q}" target="_blank" rel="noopener">News</a>
-        <a class="pm-link" href="https://www.youtube.com/results?search_query=${q}+highlights" target="_blank" rel="noopener">Film</a>
-      </div>
-      ${p.rank ? '<div style="font-size:9px;color:var(--text3);margin-top:10px;line-height:1.5;">Rank: SI dynasty rookie top 50, updated Jul 30 2026.</div>' : ''}
-    </div>`;
+    <div class="pm-tabs">
+      <div class="pm-tab on" onclick="pmTab('overview')">Overview</div>
+      <div class="pm-tab" onclick="pmTab('news')">News</div>
+      <div class="pm-tab" onclick="pmTab('links')">Links</div>
+    </div>
+    <div class="pm-body" id="pm-body"></div>`;
   pm.classList.add('open');
   document.getElementById('pm-scrim').classList.add('open');
   _lastEv = ev;
+  renderPmTab();
   positionPm(ev);
   loadEspn(p);
+}
+
+function pmTab(t){
+  PMTAB = t;
+  document.querySelectorAll('.pm-tab').forEach((el,i) => {
+    el.classList.toggle('on', ['overview','news','links'][i] === t);
+  });
+  renderPmTab();
+  positionPm(_lastEv);
+}
+
+function renderPmTab(){
+  const box = document.getElementById('pm-body');
+  if(!box || !PMP) return;
+  const p = PMP, info = espnCache[p.id];
+  const loading = info === undefined;
+
+  if(PMTAB === 'links'){
+    const q = encodeURIComponent(p.name + ' NFL');
+    box.innerHTML = `
+      <div class="pm-h">Full profiles</div>
+      <div class="pm-links">
+        ${p.cfb ? `<a class="pm-link" href="${p.cfb}" target="_blank" rel="noopener">College stats</a>` : ''}
+        ${p.pfr ? `<a class="pm-link" href="${p.pfr}" target="_blank" rel="noopener">Pro stats</a>` : ''}
+        <a class="pm-link" href="https://news.google.com/search?q=${q}" target="_blank" rel="noopener">Google News</a>
+        <a class="pm-link" href="https://www.youtube.com/results?search_query=${q}+highlights" target="_blank" rel="noopener">Highlights</a>
+      </div>
+      <div class="pm-ext">These open in a new tab. Sports-Reference, ESPN and YouTube all block being embedded inside another page, so they can't be shown here directly.</div>`;
+    return;
+  }
+
+  if(PMTAB === 'news'){
+    if(loading){ box.innerHTML = '<div class="pm-load"><span class="pm-spin"></span> Loading news&hellip;</div>'; return; }
+    if(info && info.news && info.news.length){
+      box.innerHTML = info.news.slice(0,6).map(n =>
+        `<a class="pm-news" href="${n.url}" target="_blank" rel="noopener">
+           <div class="pm-news-t">${n.title}</div>
+           ${n.desc ? `<div class="pm-news-d">${n.desc}</div>` : ''}
+           ${n.date ? `<div class="pm-news-d">${n.date}</div>` : ''}
+         </a>`).join('');
+    } else {
+      box.innerHTML = '<div class="pm-muted">No ESPN news found for this player yet.</div>';
+    }
+    return;
+  }
+
+  // overview
+  let html = '';
+  if(info && info.bio){
+    const b = info.bio;
+    html += '<div class="pm-h">Measurables</div><div class="pm-bio">'
+      + [['Ht',b.ht],['Wt',b.wt],['Age',b.age],['Exp',b.exp]]
+        .filter(x=>x[1]).map(x=>`<div class="pm-bio-i"><div class="pm-bio-v">${x[1]}</div><div class="pm-bio-l">${x[0]}</div></div>`).join('')
+      + '</div>';
+  }
+  if(loading){
+    html += '<div class="pm-load"><span class="pm-spin"></span> Loading stats&hellip;</div>';
+  } else if(info && info.stats && info.stats.length){
+    html += '<div class="pm-h">2026 season</div><div class="pm-stats">'
+      + info.stats.slice(0,9).map(s=>`<div class="pm-stat"><div class="pm-stat-v">${s.v}</div><div class="pm-stat-l">${s.l}</div></div>`).join('')
+      + '</div>';
+  } else {
+    html += '<div class="pm-muted">No NFL stats yet &mdash; the regular season hasn\'t started. Check the Links tab for college numbers.</div>';
+  }
+  box.innerHTML = html;
 }
 
 function positionPm(ev){
@@ -679,49 +750,62 @@ function closePlayer(){
 document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closePlayer(); closePickEditor(); } });
 
 async function loadEspn(p){
-  const box = () => document.getElementById('pm-live');
   try{
-    let info = espnCache[p.id];
-    if(info === undefined){
-      info = await espnLookup(p);
-      espnCache[p.id] = info;
+    if(espnCache[p.id] === undefined){
+      espnCache[p.id] = await espnLookup(p);
     }
-    if(!box()) return;
-    if(!info || !info.id){ box().innerHTML = fallbackNote(); return; }
-
-    // headshot
-    const wrap = document.getElementById('pm-shot-wrap');
-    if(wrap){
-      const img = new Image();
-      img.onload = () => { if(wrap) wrap.innerHTML = `<img class="pm-shot" src="${img.src}" alt="">`; };
-      img.src = `https://a.espncdn.com/i/headshots/nfl/players/full/${info.id}.png`;
-    }
-
-    let html = '';
-    if(info.stats && info.stats.length){
-      html += '<div class="pm-h">2026 season</div><div class="pm-stats">' +
-        info.stats.slice(0,8).map(s =>
-          `<div class="pm-stat"><div class="pm-stat-v">${s.v}</div><div class="pm-stat-l">${s.l}</div></div>`
-        ).join('') + '</div>';
-    }
-    if(info.news && info.news.length){
-      html += '<div class="pm-h">Recent news</div>' +
-        info.news.slice(0,4).map(n =>
-          `<a class="pm-news" href="${n.url}" target="_blank" rel="noopener">
-             <div class="pm-news-t">${n.title}</div>
-             ${n.date ? `<div class="pm-news-d">${n.date}</div>` : ''}
-           </a>`
-        ).join('');
-    }
-    box().innerHTML = html || fallbackNote();
-    positionPm(null_evt_keep());
+    const info = espnCache[p.id];
+    if(PMP && PMP.id === p.id){ renderPmTab(); positionPm(_lastEv); }
+    // photo: ESPN first, then Sleeper
+    if(info && info.id) setShot(`https://a.espncdn.com/i/headshots/nfl/players/full/${info.id}.png`, p);
+    else sleeperPhoto(p);
   }catch(e){
-    if(box()) box().innerHTML = fallbackNote();
+    espnCache[p.id] = null;
+    if(PMP && PMP.id === p.id) renderPmTab();
+    sleeperPhoto(p);
   }
 }
 
-let _lastEv=null;
-function null_evt_keep(){return _lastEv;}
+function setShot(url, p){
+  const img = new Image();
+  img.onload = () => {
+    const wrap = document.getElementById('pm-shot-wrap');
+    if(wrap && PMP && PMP.id === p.id && img.naturalWidth > 10){
+      wrap.innerHTML = `<img class="pm-shot" src="${url}" alt="">`;
+    }
+  };
+  img.onerror = () => { if(!url.includes('sleepercdn')) sleeperPhoto(p); };
+  img.src = url;
+}
+
+function nkey(s){
+  return String(s||'').toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b\.?/g,'').replace(/[^a-z]/g,'');
+}
+
+async function sleeperPhoto(p){
+  try{
+    if(SLEEPER === null){
+      SLEEPER = 'loading';
+      const r = await fetch('https://api.sleeper.app/v1/players/nfl');
+      const j = await r.json();
+      const map = {};
+      Object.values(j).forEach(a => {
+        if(a && a.full_name && a.position) map[nkey(a.full_name)+'|'+a.position] = a;
+      });
+      SLEEPER = map;
+    }
+    while(SLEEPER === 'loading'){ await new Promise(r=>setTimeout(r,150)); }
+    const a = SLEEPER[nkey(p.name)+'|'+p.pos];
+    if(!a) return;
+    if(a.player_id) setShot(`https://sleepercdn.com/content/nfl/players/${a.player_id}.jpg`, p);
+    // bio from sleeper
+    const info = espnCache[p.id] || (espnCache[p.id] = {stats:[],news:[]});
+    const ht = a.height ? (String(a.height).includes("'") ? a.height : Math.floor(a.height/12)+"'"+(a.height%12)+'"') : '';
+    info.bio = { ht: ht, wt: a.weight ? a.weight+' lb' : '', age: a.age || '', exp: (a.years_exp === 0 ? 'R' : a.years_exp) };
+    if(PMP && PMP.id === p.id){ renderPmTab(); positionPm(_lastEv); }
+  }catch(e){ SLEEPER = SLEEPER === 'loading' ? null : SLEEPER; }
+}
+
 function fallbackNote(){
   return '<div class="pm-muted">No NFL stats yet &mdash; the season hasn\'t started. Use the links below for college numbers and news.</div>';
 }
@@ -756,7 +840,7 @@ async function espnLookup(p){
     if(Array.isArray(nw)){
       nw.forEach(n => {
         const url = n.links && n.links.web && n.links.web.href;
-        if(n.headline && url) out.news.push({ title: n.headline, url, date: fmtDate(n.published) });
+        if(n.headline && url) out.news.push({ title: n.headline, url, desc: (n.description||'').slice(0,140), date: fmtDate(n.published) });
       });
     }
   }catch(e){}
