@@ -104,7 +104,7 @@ select option{background:var(--bg3);}
 .done-title{font-family:var(--fh);font-size:48px;font-weight:900;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
 .loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;}
 .loading-logo{font-family:var(--fh);font-size:52px;font-weight:900;color:var(--accent);text-transform:uppercase;}
-.loading-sub{color:var(--text2);font-size:14px;}
+.loading-sub{color:var(--text2);font-size:14px;text-align:center;max-width:520px;line-height:1.6;}
 .spinner{width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 @media(max-width:640px){.g2,.g3{grid-template-columns:1fr;}.team-grid{grid-template-columns:1fr;}.stat-grid{grid-template-columns:repeat(2,1fr);}.clock-team{font-size:22px;}.page-title{font-size:24px;}}
@@ -388,6 +388,24 @@ const AC=[
   ['#0f2d2d','#2dd4bf'],['#1e1e3d','#818cf8'],['#3d1a2d','#f472b6'],
 ];
 
+function showFbError(e){
+  const msg=(e&&e.message)?e.message:String(e);
+  const box=document.getElementById('loading-msg');
+  let human='';
+  if(/permission|denied/i.test(msg)){
+    human='<strong style="color:var(--accent);">Database rules are blocking access.</strong><br><br>'
+      +'In Firebase go to <strong>Build &rarr; Realtime Database &rarr; Rules</strong>, replace everything with:'
+      +'<pre style="text-align:left;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;margin:12px auto;max-width:340px;font-size:12px;overflow-x:auto;">{\n  "rules": {\n    ".read": true,\n    ".write": true\n  }\n}</pre>'
+      +'then click <strong>Publish</strong> and reload this page.';
+  } else if(/network|offline|unavailable/i.test(msg)){
+    human='<strong style="color:var(--accent);">Network problem.</strong><br>Could not reach Firebase servers.';
+  } else {
+    human='<strong style="color:var(--accent);">Firebase connection failed.</strong>';
+  }
+  box.innerHTML=human+`<div style="margin-top:16px;font-size:11px;color:var(--text3);font-family:monospace;word-break:break-word;max-width:420px;">${msg}</div>`
+    +'<div style="margin-top:16px;"><button class="btn" onclick="location.reload()">&#8635; Retry</button></div>';
+}
+
 function byBoard(a,b){if(!!a.udfa!==!!b.udfa)return a.udfa?1:-1;if(a.udfa)return a.name.localeCompare(b.name);return a.pk-b.pk;}
 function slot(r){return r.udfa?'<span class="udfa-tag">UDFA</span>':`Rd ${r.rd}, Pk ${r.pk}`;}
 function linkIcons(r){
@@ -419,7 +437,7 @@ function setSS(status,label){
   try{
     fbApp=firebase.initializeApp(FB_CFG,'dynastyDraft');
     fbDb=firebase.database(fbApp);
-    fbRef=fbDb.ref('dynasty_draft');
+    fbRef=fbDb.ref('rookies2026');
   }catch(e){
     document.getElementById('loading-msg').textContent='Firebase error: '+e.message;
     return;
@@ -436,7 +454,7 @@ function setSS(status,label){
       resetTeams();renderSetupPool();show('s-setup');
     }
   }).catch(e=>{
-    document.getElementById('loading-msg').textContent='Could not reach Firebase. Check your internet connection.';
+    showFbError(e);
     setSS('offline','Offline');
   });
 })();
