@@ -67,6 +67,53 @@ select option{background:var(--bg3);}
 .prow-info{flex:1;min-width:0;}
 .prow-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .prow-meta{font-size:11px;color:var(--text2);margin-top:1px;}
+.prow-name{cursor:pointer;}
+.prow-name:hover{color:var(--accent);text-decoration:underline;}
+#pe-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(3px);z-index:600;display:none;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;}
+#pe-overlay.open{display:flex;}
+#pe{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:640px;animation:pmIn .18s ease;}
+.pe-top{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--border);}
+.pe-title{font-family:var(--fh);font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;}
+.pe-body{padding:16px 20px;max-height:60vh;overflow-y:auto;}
+.pe-body::-webkit-scrollbar{width:4px;}
+.pe-body::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+.pe-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.pe-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+.pe-row:last-child{border-bottom:none;}
+.pe-slot{font-family:var(--fh);font-size:15px;font-weight:900;color:var(--text3);min-width:52px;}
+.pe-row select{flex:1;padding:6px 9px;font-size:13px;}
+.pe-row.locked{opacity:.45;}
+.pe-traded{font-size:10px;font-family:var(--fh);font-weight:700;letter-spacing:.5px;color:var(--accent);background:rgba(232,160,32,.12);border:1px solid rgba(232,160,32,.3);border-radius:3px;padding:2px 6px;white-space:nowrap;}
+.pe-taken{font-size:11px;color:var(--text3);white-space:nowrap;}
+.traded-flag{font-size:10px;font-family:var(--fh);font-weight:700;letter-spacing:.5px;color:var(--accent);}
+#pm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(3px);z-index:500;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+#pm-overlay.open{display:flex;}
+#pm{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:560px;overflow:hidden;animation:pmIn .18s ease;}
+@keyframes pmIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+.pm-top{display:flex;gap:16px;padding:20px;border-bottom:1px solid var(--border);align-items:flex-start;}
+.pm-shot{width:78px;height:78px;border-radius:10px;object-fit:cover;background:var(--bg4);flex-shrink:0;border:1px solid var(--border2);}
+.pm-shot-fb{width:78px;height:78px;border-radius:10px;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-size:26px;font-weight:900;color:var(--text3);flex-shrink:0;}
+.pm-name{font-family:var(--fh);font-size:26px;font-weight:900;text-transform:uppercase;line-height:1.05;letter-spacing:.5px;}
+.pm-sub{font-size:12px;color:var(--text2);margin-top:5px;line-height:1.6;}
+.pm-x{margin-left:auto;background:none;border:none;color:var(--text3);font-size:26px;cursor:pointer;line-height:1;padding:0 2px;}
+.pm-x:hover{color:var(--text);}
+.pm-body{padding:16px 20px 20px;}
+.pm-h{font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin:16px 0 8px;}
+.pm-h:first-child{margin-top:0;}
+.pm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:8px;}
+.pm-stat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 6px;text-align:center;}
+.pm-stat-v{font-family:var(--fh);font-size:19px;font-weight:900;color:var(--text);line-height:1.1;}
+.pm-stat-l{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+.pm-news{display:block;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:7px;text-decoration:none;transition:border-color .15s;}
+.pm-news:hover{border-color:var(--accent);}
+.pm-news-t{font-size:13px;font-weight:600;color:var(--text);line-height:1.35;}
+.pm-news-d{font-size:11px;color:var(--text3);margin-top:4px;}
+.pm-links{display:flex;flex-wrap:wrap;gap:7px;}
+.pm-link{display:inline-flex;align-items:center;gap:5px;padding:8px 13px;border-radius:8px;border:1px solid var(--border2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;transition:all .15s;}
+.pm-link:hover{border-color:var(--accent);color:var(--accent);background:rgba(232,160,32,.07);}
+.pm-muted{font-size:12px;color:var(--text3);line-height:1.6;}
+.pm-load{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--text2);padding:4px 0;}
+.pm-spin{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
 .udfa-tag{display:inline-block;font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.5px;padding:1px 6px;border-radius:3px;background:rgba(138,146,168,.15);color:var(--text2);border:1px solid var(--border2);}
 .plinks{display:flex;gap:4px;flex-shrink:0;}
 .plink{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.5px;padding:3px 7px;border-radius:4px;border:1px solid var(--border2);color:var(--text2);text-decoration:none;transition:all .15s;}
@@ -119,6 +166,7 @@ select option{background:var(--bg3);}
       <span class="dot syncing" id="sync-dot"></span>
       <span id="sync-label">Connecting</span>
     </div>
+    <button class="btn btn-sm btn-ghost" id="trade-btn" onclick="openPickEditor('live')" style="display:none;">&#8646; Trades</button>
     <button class="btn btn-sm btn-ghost" id="nav-btn" onclick="goSetup()" style="display:none;">&#9881; Settings</button>
   </div>
 </div>
@@ -141,12 +189,12 @@ select option{background:var(--bg3);}
   <div class="card">
     <div class="card-title">League Settings</div>
     <div class="g3">
-      <div class="field"><label class="lbl">Teams</label><input type="number" id="cfg-teams" value="12" min="4" max="24" oninput="resetTeams()"></div>
-      <div class="field"><label class="lbl">Rounds</label><input type="number" id="cfg-rounds" value="5" min="1" max="10"></div>
+      <div class="field"><label class="lbl">Teams</label><input type="number" id="cfg-teams" value="12" min="4" max="24" oninput="resetTeams();updateTradeSummary();"></div>
+      <div class="field"><label class="lbl">Rounds</label><input type="number" id="cfg-rounds" value="5" min="1" max="10" oninput="updateTradeSummary()"></div>
       <div class="field"><label class="lbl">Seconds/pick (0=off)</label><input type="number" id="cfg-timer" value="120" min="0" max="600"></div>
     </div>
     <div class="field"><label class="lbl">Draft Order</label>
-      <select id="cfg-type"><option value="snake">Snake (reverses each round)</option><option value="linear">Linear (same order every round)</option></select>
+      <select id="cfg-type" onchange="updateTradeSummary();document.getElementById('order-desc').textContent=this.value;"><option value="snake">Snake (reverses each round)</option><option value="linear">Linear (same order every round)</option></select>
     </div>
   </div>
   <div class="card">
@@ -175,6 +223,14 @@ select option{background:var(--bg3);}
       <input id="setup-search" placeholder="Search players..." oninput="renderSetupPool()">
     </div>
     <div class="scrollbox" id="setup-pool"></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">Pick Ownership &amp; Trades</div>
+      <button class="btn btn-sm" onclick="openPickEditor('setup')">&#8646; Edit picks</button>
+    </div>
+    <p style="font-size:12px;color:var(--text2);line-height:1.6;">By default each team keeps its own picks in <span id="order-desc">snake</span> order. If picks were traded, reassign them here.</p>
+    <p id="trade-summary" style="font-size:12px;color:var(--accent);margin-top:8px;"></p>
   </div>
   <button class="btn btn-accent btn-lg" style="width:100%;justify-content:center;" onclick="launchDraft()">&#9654;&nbsp; Start Draft — Go Live</button>
   <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Picks sync instantly across all devices via Firebase</p>
@@ -231,6 +287,13 @@ select option{background:var(--bg3);}
   <button class="btn btn-lg" style="margin-left:10px;" onclick="goSetup()">New Draft</button>
 </div>
 
+</div>
+
+<div id="pe-overlay" onclick="if(event.target===this)closePickEditor()">
+  <div id="pe"></div>
+</div>
+<div id="pm-overlay" onclick="if(event.target===this)closePlayer()">
+  <div id="pm"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -406,6 +469,279 @@ function showFbError(e){
     +'<div style="margin-top:16px;"><button class="btn" onclick="location.reload()">&#8635; Retry</button></div>';
 }
 
+// ===== PICK OWNERSHIP / TRADES =====
+let PE = null; // {mode, picks, teams}
+
+function currentSetupTeams(){
+  const n = parseInt(document.getElementById('cfg-teams').value) || 12;
+  return Array.from({length:n}, (_,i) => ({
+    id:i, name: (document.getElementById('tn-'+i)||{}).value || ('Team '+(i+1))
+  }));
+}
+
+function setupSignature(){
+  return [document.getElementById('cfg-teams').value,
+          document.getElementById('cfg-rounds').value,
+          document.getElementById('cfg-type').value].join('|');
+}
+
+function openPickEditor(mode){
+  let picks, teams;
+  if(mode === 'live'){
+    if(!DS) return;
+    teams = DS.teams;
+    picks = DS.picks.map(p => ({...p}));
+  } else {
+    teams = currentSetupTeams();
+    const rounds = parseInt(document.getElementById('cfg-rounds').value) || 5;
+    const type = document.getElementById('cfg-type').value;
+    if(L.customPicks && L.customSig === setupSignature()){
+      picks = L.customPicks.map(p => ({...p}));
+    } else {
+      picks = buildOrder(teams.length, rounds, type);
+    }
+  }
+  picks.forEach(p => { if(p.origTeamIdx === undefined) p.origTeamIdx = p.teamIdx; });
+  PE = { mode, picks, teams };
+  renderPickEditor();
+  document.getElementById('pe-overlay').classList.add('open');
+}
+
+function renderPickEditor(){
+  if(!PE) return;
+  const opts = idx => PE.teams.map(t =>
+    `<option value="${t.id}" ${t.id===idx?'selected':''}>${t.name}</option>`).join('');
+  let rows = '';
+  let lastRound = null;
+  PE.picks.forEach((p,i) => {
+    if(p.round !== lastRound){
+      lastRound = p.round;
+      rows += `<div class="round-hdr">Round ${p.round}</div>`;
+    }
+    const taken = p.playerId !== null && p.playerId !== undefined;
+    const traded = p.teamIdx !== p.origTeamIdx;
+    rows += `<div class="pe-row ${taken?'locked':''}">
+      <span class="pe-slot">${p.round}.${String(i % PE.teams.length + 1).padStart(2,'0')}</span>
+      <select ${taken?'disabled':''} onchange="setPickOwner(${i}, this.value)">${opts(p.teamIdx)}</select>
+      ${traded ? `<span class="pe-traded">via ${PE.teams[p.origTeamIdx].name}</span>` : ''}
+      ${taken ? '<span class="pe-taken">picked</span>' : ''}
+    </div>`;
+  });
+  const n = PE.picks.filter(p => p.teamIdx !== p.origTeamIdx).length;
+  document.getElementById('pe').innerHTML = `
+    <div class="pe-top">
+      <div style="flex:1;">
+        <div class="pe-title">Pick Ownership</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px;">
+          ${PE.mode==='live' ? 'Completed picks are locked.' : 'Reassign any pick that was traded.'}
+        </div>
+      </div>
+      <button class="pm-x" onclick="closePickEditor()">&times;</button>
+    </div>
+    <div class="pe-body">${rows}</div>
+    <div class="pe-foot">
+      <span style="flex:1;font-size:12px;color:var(--text2);align-self:center;">
+        ${n ? n+' pick'+(n===1?'':'s')+' reassigned' : 'No trades yet'}
+      </span>
+      <button class="btn" onclick="resetPickOwners()">Reset all</button>
+      <button class="btn btn-accent" onclick="savePickOwners()">Save</button>
+    </div>`;
+}
+
+function setPickOwner(i, val){
+  if(!PE) return;
+  PE.picks[i].teamIdx = parseInt(val);
+  renderPickEditor();
+}
+
+function resetPickOwners(){
+  if(!PE) return;
+  PE.picks.forEach(p => { p.teamIdx = p.origTeamIdx; });
+  renderPickEditor();
+}
+
+async function savePickOwners(){
+  if(!PE) return;
+  if(PE.mode === 'live'){
+    DS.picks = PE.picks;
+    await saveDS();
+    renderDraftFromDS();
+  } else {
+    L.customPicks = PE.picks;
+    L.customSig = setupSignature();
+    updateTradeSummary();
+  }
+  closePickEditor();
+}
+
+function closePickEditor(){
+  document.getElementById('pe-overlay').classList.remove('open');
+  PE = null;
+}
+
+function updateTradeSummary(){
+  const el = document.getElementById('trade-summary');
+  if(!el) return;
+  if(L.customPicks && L.customSig === setupSignature()){
+    const n = L.customPicks.filter(p => p.teamIdx !== p.origTeamIdx).length;
+    el.textContent = n ? `${n} pick${n===1?'':'s'} reassigned via trade` : '';
+  } else {
+    el.textContent = '';
+  }
+}
+
+// ===== PLAYER DETAIL PANEL =====
+const espnCache = {};
+
+function allPlayers(){ return (DS && DS.rookies) ? DS.rookies : L.rookies; }
+
+function openPlayer(id){
+  const p = allPlayers().find(x => x.id === id);
+  if(!p) return;
+  const ov = document.getElementById('pm-overlay');
+  const initials = p.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const q = encodeURIComponent(p.name + ' NFL');
+  document.getElementById('pm').innerHTML = `
+    <div class="pm-top">
+      <div id="pm-shot-wrap"><div class="pm-shot-fb">${initials}</div></div>
+      <div style="flex:1;min-width:0;">
+        <div class="pm-name">${p.name}</div>
+        <div class="pm-sub">
+          <span class="tag tag-${p.pos}">${p.pos}</span>
+          &nbsp;${p.nfl}<br>${p.college} &middot; ${p.udfa ? 'Undrafted free agent' : 'Round '+p.rd+', Pick '+p.pk+' overall'}
+        </div>
+      </div>
+      <button class="pm-x" onclick="closePlayer()">&times;</button>
+    </div>
+    <div class="pm-body">
+      <div id="pm-live">
+        <div class="pm-load"><span class="pm-spin"></span> Loading stats and news&hellip;</div>
+      </div>
+      <div class="pm-h">Full profiles</div>
+      <div class="pm-links">
+        ${p.cfb ? `<a class="pm-link" href="${p.cfb}" target="_blank" rel="noopener">College stats</a>` : ''}
+        ${p.pfr ? `<a class="pm-link" href="${p.pfr}" target="_blank" rel="noopener">Pro stats</a>` : ''}
+        <a class="pm-link" href="https://news.google.com/search?q=${q}" target="_blank" rel="noopener">Recent news</a>
+        <a class="pm-link" href="https://www.youtube.com/results?search_query=${q}+highlights" target="_blank" rel="noopener">Highlights</a>
+      </div>
+    </div>`;
+  ov.classList.add('open');
+  loadEspn(p);
+}
+
+function closePlayer(){ document.getElementById('pm-overlay').classList.remove('open'); }
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closePlayer(); });
+
+async function loadEspn(p){
+  const box = () => document.getElementById('pm-live');
+  try{
+    let info = espnCache[p.id];
+    if(info === undefined){
+      info = await espnLookup(p);
+      espnCache[p.id] = info;
+    }
+    if(!box()) return;
+    if(!info || !info.id){ box().innerHTML = fallbackNote(); return; }
+
+    // headshot
+    const wrap = document.getElementById('pm-shot-wrap');
+    if(wrap){
+      const img = new Image();
+      img.onload = () => { if(wrap) wrap.innerHTML = `<img class="pm-shot" src="${img.src}" alt="">`; };
+      img.src = `https://a.espncdn.com/i/headshots/nfl/players/full/${info.id}.png`;
+    }
+
+    let html = '';
+    if(info.stats && info.stats.length){
+      html += '<div class="pm-h">2026 season</div><div class="pm-stats">' +
+        info.stats.slice(0,8).map(s =>
+          `<div class="pm-stat"><div class="pm-stat-v">${s.v}</div><div class="pm-stat-l">${s.l}</div></div>`
+        ).join('') + '</div>';
+    }
+    if(info.news && info.news.length){
+      html += '<div class="pm-h">Recent news</div>' +
+        info.news.slice(0,4).map(n =>
+          `<a class="pm-news" href="${n.url}" target="_blank" rel="noopener">
+             <div class="pm-news-t">${n.title}</div>
+             ${n.date ? `<div class="pm-news-d">${n.date}</div>` : ''}
+           </a>`
+        ).join('');
+    }
+    box().innerHTML = html || fallbackNote();
+  }catch(e){
+    if(box()) box().innerHTML = fallbackNote();
+  }
+}
+
+function fallbackNote(){
+  return '<div class="pm-muted">No live stats or news available for this player yet &mdash; rookies often have no NFL data until the regular season. Use the links below for full profiles.</div>';
+}
+
+async function espnLookup(p){
+  // 1. find the athlete id
+  let id = null;
+  try{
+    const r = await fetch('https://site.web.api.espn.com/apis/search/v2?limit=12&query=' + encodeURIComponent(p.name));
+    const j = await r.json();
+    id = findAthleteId(j, p.name);
+  }catch(e){ return null; }
+  if(!id) return null;
+
+  const out = { id, stats: [], news: [] };
+
+  // 2. overview: stats + news
+  try{
+    const r2 = await fetch(`https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/overview`);
+    const j2 = await r2.json();
+    const st = j2 && j2.statistics;
+    if(st && Array.isArray(st.displayNames) && Array.isArray(st.splits)){
+      const row = st.splits.find(s => Array.isArray(s.stats)) || st.splits[0];
+      if(row && row.stats){
+        st.displayNames.forEach((lbl,i) => {
+          const v = row.stats[i];
+          if(v !== undefined && v !== null && v !== '' && v !== '0') out.stats.push({ l: lbl, v: v });
+        });
+      }
+    }
+    const nw = j2 && j2.news;
+    if(Array.isArray(nw)){
+      nw.forEach(n => {
+        const url = n.links && n.links.web && n.links.web.href;
+        if(n.headline && url) out.news.push({ title: n.headline, url, date: fmtDate(n.published) });
+      });
+    }
+  }catch(e){}
+
+  return out;
+}
+
+function findAthleteId(obj, name){
+  const want = name.toLowerCase().replace(/[^a-z]/g,'');
+  let best = null;
+  (function walk(o){
+    if(best || !o || typeof o !== 'object') return;
+    if(Array.isArray(o)){ o.forEach(walk); return; }
+    const t = String(o.type || o.sport || '').toLowerCase();
+    const dn = String(o.displayName || o.title || o.name || '').toLowerCase().replace(/[^a-z]/g,'');
+    const rawId = o.id || o.uid || '';
+    const m = String(rawId).match(/(\d{5,8})/);
+    if(m && dn && (t.includes('player') || t.includes('athlete'))){
+      if(dn === want || dn.includes(want) || want.includes(dn)) best = m[1];
+    }
+    Object.values(o).forEach(walk);
+  })(obj);
+  return best;
+}
+
+function fmtDate(s){
+  if(!s) return '';
+  try{
+    const d = new Date(s);
+    if(isNaN(d)) return '';
+    return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+  }catch(e){ return ''; }
+}
+
 function byBoard(a,b){if(!!a.udfa!==!!b.udfa)return a.udfa?1:-1;if(a.udfa)return a.name.localeCompare(b.name);return a.pk-b.pk;}
 function slot(r){return r.udfa?'<span class="udfa-tag">UDFA</span>':`Rd ${r.rd}, Pk ${r.pk}`;}
 function linkIcons(r){
@@ -445,7 +781,7 @@ function setSS(status,label){
   setSS('syncing','Connecting...');
   fbRef.once('value').then(snap=>{
     const ex=snap.val();
-    document.getElementById('nav-btn').style.display='flex';
+    document.getElementById('nav-btn').style.display='flex';document.getElementById('trade-btn').style.display='flex';
     setSS('live','Live');
     if(ex&&ex.started){
       DS=ex;L.tmax=ex.timerSecs||120;
@@ -507,7 +843,7 @@ function renderSetupPool(){
       <span class="prow-rank">${i+1}</span>
       <span class="tag tag-${r.pos}">${r.pos}</span>
       <div class="prow-info">
-        <div class="prow-name">${r.name}</div>
+        <div class="prow-name" onclick="openPlayer(${r.id})">${r.name}</div>
         <div class="prow-meta">${r.nfl} &middot; ${r.college} &middot; ${slot(r)}</div>
       </div>
       ${linkIcons(r)}
@@ -538,7 +874,14 @@ async function launchDraft(){
   const type=document.getElementById('cfg-type').value;
   const timer=parseInt(document.getElementById('cfg-timer').value)||0;
   const teams=Array.from({length:n},(_,i)=>({id:i,name:document.getElementById(`tn-${i}`)?.value||`Team ${i+1}`}));
-  DS={teams,picks:buildOrder(n,rounds,type),rookies:L.rookies,timerSecs:timer,currentPickIdx:0,started:true,done:false,ts:Date.now()};
+  let picks;
+  if(L.customPicks && L.customSig === setupSignature()){
+    picks = L.customPicks.map(p=>({...p}));
+  } else {
+    picks = buildOrder(n,rounds,type);
+    picks.forEach(p=>{p.origTeamIdx=p.teamIdx;});
+  }
+  DS={teams,picks,rookies:L.rookies,timerSecs:timer,currentPickIdx:0,started:true,done:false,ts:Date.now()};
   L.tmax=timer;L.lastPick=-1;
   await saveDS();enterDraft();
 }
@@ -593,7 +936,7 @@ function renderBoard(cur){
         <span class="pick-num">${p.pickNum}</span>
         <div class="ava" style="width:28px;height:28px;font-size:10px;background:${abg};color:${atxt};">${DS.teams[p.teamIdx].name.slice(0,2).toUpperCase()}</div>
         <div style="flex:1;min-width:0;">
-          <div class="pick-team">${DS.teams[p.teamIdx].name}</div>
+          <div class="pick-team">${DS.teams[p.teamIdx].name}${(p.origTeamIdx!==undefined&&p.origTeamIdx!==p.teamIdx)?` <span class="traded-flag">via ${DS.teams[p.origTeamIdx].name}</span>`:''}</div>
           ${done&&pl?`<div class="pick-player">${pl.name} <span class="tag tag-${pl.pos}">${pl.pos}</span></div>`:''}
         </div>
         ${isCur?'<span style="font-size:11px;font-weight:700;color:var(--accent);">On Clock</span>':''}
@@ -615,7 +958,7 @@ function renderPlayers(){
       <span class="prow-rank">${i+1}</span>
       <span class="tag tag-${r.pos}">${r.pos}</span>
       <div class="prow-info">
-        <div class="prow-name">${r.name}</div>
+        <div class="prow-name" onclick="openPlayer(${r.id})">${r.name}</div>
         <div class="prow-meta">${r.nfl} &middot; ${r.college} &middot; ${slot(r)}</div>
       </div>
       ${linkIcons(r)}
@@ -648,7 +991,7 @@ function renderTeamView(){
   ['QB','RB','WR','TE'].forEach(pos=>{
     if(!byPos[pos].length)return;
     html+=`<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin:12px 0 6px;font-family:var(--fh);">${pos}</div>`;
-    byPos[pos].forEach(pl=>{html+=`<div class="pick-row done"><span class="tag tag-${pl.pos}">${pl.pos}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">${pl.name}</div><div style="font-size:11px;color:var(--text2);">${pl.nfl} &middot; ${pl.college} &middot; Your pick ${pl.pickNum} (Rd ${pl.round})</div></div>${linkIcons(pl)}</div>`;});
+    byPos[pos].forEach(pl=>{html+=`<div class="pick-row done"><span class="tag tag-${pl.pos}">${pl.pos}</span><div style="flex:1;min-width:0;"><div class="prow-name" style="font-size:13px;" onclick="openPlayer(${pl.id})">${pl.name}</div><div style="font-size:11px;color:var(--text2);">${pl.nfl} &middot; ${pl.college} &middot; Your pick ${pl.pickNum} (Rd ${pl.round})</div></div>${linkIcons(pl)}</div>`;});
   });
   document.getElementById('team-view').innerHTML=html;
 }
