@@ -614,7 +614,7 @@ function renderPickEditor(){
       lastRound = p.round;
       rows += `<div class="round-hdr">Round ${p.round}</div>`;
     }
-    const taken = p.playerId !== null && p.playerId !== undefined;
+    const taken = hasPick(p);
     const traded = p.teamIdx !== p.origTeamIdx;
     rows += `<div class="pe-row ${taken?'locked':''}">
       <span class="pe-slot">${p.round}.${String(i % PE.teams.length + 1).padStart(2,'0')}</span>
@@ -878,10 +878,36 @@ function lockCommish(){
   renderDraftFromDS();
 }
 
+async function setPin(){
+  if(!DS) return;
+  const v = prompt('Set a commissioner PIN (numbers or letters, up to 12 characters):', DS.pin || '');
+  if(v === null) return;
+  const pin = v.trim().slice(0,12);
+  if(!pin){ alert('PIN cannot be blank. Use Remove PIN if you want it open.'); return; }
+  DS.pin = pin;
+  localStorage.setItem('dd_commish', pin);
+  await saveDS();
+  sysChat('Commissioner controls are now PIN protected.');
+  openDraftSettings();
+  renderDraftFromDS();
+  alert('PIN set to: ' + pin + '\n\nThis device is unlocked. Other managers can now only draft their own team.');
+}
+
+async function clearPin(){
+  if(!DS) return;
+  if(!confirm('Remove the PIN?\n\nEveryone in the league will be able to pause, undo, autodraft and draft for any team.')) return;
+  DS.pin = '';
+  localStorage.removeItem('dd_commish');
+  await saveDS();
+  sysChat('Commissioner PIN removed - controls are open to everyone.');
+  openDraftSettings();
+  renderDraftFromDS();
+}
+
 // ===== AUTODRAFT =====
 function bestAvailable(){
   if(!DS) return null;
-  const taken = new Set(DS.picks.filter(p => p.playerId !== null && p.playerId !== undefined).map(p => p.playerId));
+  const taken = new Set(DS.picks.filter(hasPick).map(p => p.playerId));
   const pool = DS.rookies.filter(r => !taken.has(r.id));
   if(!pool.length) return null;
   pool.sort((a,b) => {
@@ -955,7 +981,7 @@ async function commitPick(playerId, idx, isAuto){
 // ===== LIVE DRAFT SETTINGS =====
 function openDraftSettings(){
   if(!DS){ show('s-setup'); return; }
-  const made = DS.picks.filter(p => p.playerId !== null && p.playerId !== undefined).length;
+  const made = DS.picks.filter(hasPick).length;
   if(!isCommish()){
     document.getElementById('ds').innerHTML =
       '<div class="pe-top"><div style="flex:1;">' +
@@ -1024,9 +1050,20 @@ function openDraftSettings(){
       '<div class="ds-note">Opens in Excel. Includes every pick plus a roster summary per team.</div>' +
     '</div>' +
 
+    '<div class="ds-sec"><div class="ds-h">Commissioner access</div>' +
+      (DS.pin
+        ? '<p style="font-size:13px;color:var(--text2);line-height:1.6;">A PIN is set. Only devices that entered it can pause, undo, autodraft, edit picks or draft for other teams.</p>'
+        : '<p style="font-size:13px;color:var(--text2);line-height:1.6;">No PIN set &mdash; <strong style="color:var(--accent);">everyone in your league can draft for any team.</strong> Set one to lock these controls to you.</p>') +
+      '<div class="ds-row" style="margin-top:12px;">' +
+        '<button class="btn btn-accent" onclick="setPin()">' + (DS.pin ? 'Change PIN' : 'Set commissioner PIN') + '</button>' +
+        (DS.pin ? '<button class="btn" onclick="clearPin()">Remove PIN</button>' : '') +
+        (DS.pin ? '<button class="btn" onclick="lockCommish()">Lock this device</button>' : '') +
+      '</div>' +
+    '</div>' +
+
     '<div class="ds-sec ds-danger"><div class="ds-h" style="color:var(--red);">Danger zone</div>' +
       '<div class="ds-row"><button class="btn btn-danger" onclick="closeDraftSettings();resetDraft();">&#8635; Reset entire draft</button>' +
-      (DS.pin ? '<button class="btn" onclick="lockCommish()">Lock controls on this device</button>' : '') + '</div>' +
+'</div>' +
       '<div class="ds-note">Erases all picks and chat for everyone and returns to setup. Export first if you want a record.</div>' +
     '</div>';
   { const o = el('ds-overlay'); if(o) o.classList.add('open'); }
@@ -1199,8 +1236,7 @@ async function undoLastPick(){
   if(DS.currentPickIdx <= 0){ alert('Nothing to undo - the draft is on the first pick.'); return; }
   const idx = DS.currentPickIdx - 1;
   const prev = DS.picks[idx];
-  const pl = (prev.playerId !== null && prev.playerId !== undefined)
-    ? DS.rookies.find(r => r.id === prev.playerId) : null;
+  const pl = hasPick(prev) ? DS.rookies.find(r => r.id === prev.playerId) : null;
   const who = DS.teams[prev.teamIdx].name;
   const what = pl ? (who + ' selecting ' + pl.name) : (who + "'s skipped pick");
   if(!confirm('Undo pick ' + prev.pickNum + '?\n\n' + what + ' will be reversed and the clock goes back to that team.')) return;
@@ -1219,7 +1255,7 @@ function openEditPick(i){
   if(!DS) return;
   EPI = i;
   const p = DS.picks[i];
-  const takenIds = new Set(DS.picks.filter((x,j) => j !== i && x.playerId !== null && x.playerId !== undefined).map(x => x.playerId));
+  const takenIds = new Set(DS.picks.filter((x,j) => j !== i && hasPick(x)).map(x => x.playerId));
   const avail = DS.rookies.filter(r => !takenIds.has(r.id))
     .sort((a,b) => (a.rank||999)-(b.rank||999) || a.name.localeCompare(b.name));
   const cur = p.playerId;
@@ -1244,7 +1280,8 @@ function openEditPick(i){
 async function saveEditPick(){
   if(EPI === null || !DS) return;
   const v = document.getElementById('ep-sel').value;
-  DS.picks[EPI].playerId = v === '' ? null : parseInt(v);
+  DS.picks[EPI].playerId = v === '' ? 0 : parseInt(v);
+  if(DS.picks[EPI].playerId === 0) DS.picks[EPI].playerId = null;
   closeEditPick();
   await saveDS();
   renderDraftFromDS();
@@ -1317,8 +1354,7 @@ function exportCSV(){
   rows.push(['Overall Pick','Round','Slot','Team','Player','Pos','NFL Team','College','NFL Draft','Dynasty Rank','Traded From']);
   const n = DS.teams.length;
   DS.picks.forEach((p,i) => {
-    const pl = (p.playerId !== null && p.playerId !== undefined)
-      ? DS.rookies.find(r => r.id === p.playerId) : null;
+    const pl = hasPick(p) ? DS.rookies.find(r => r.id === p.playerId) : null;
     const slot = p.round + '.' + String(i % n + 1).padStart(2,'0');
     const traded = (p.origTeamIdx !== undefined && p.origTeamIdx !== p.teamIdx)
       ? DS.teams[p.origTeamIdx].name : '';
@@ -1339,7 +1375,7 @@ function exportCSV(){
   rows.push(['ROSTER SUMMARY BY TEAM']);
   rows.push(['Team','Player','Pos','NFL Team','Round','Overall Pick']);
   DS.teams.forEach(t => {
-    const mine = DS.picks.filter(p => p.teamIdx === t.id && p.playerId !== null && p.playerId !== undefined);
+    const mine = DS.picks.filter(p => p.teamIdx === t.id && hasPick(p));
     if(!mine.length){ rows.push([t.name,'(no picks made)','','','','']); return; }
     mine.forEach(p => {
       const pl = DS.rookies.find(r => r.id === p.playerId);
@@ -1359,7 +1395,7 @@ function exportCSV(){
 
 // ===== RESET =====
 async function resetDraft(){
-  const made = DS ? DS.picks.filter(p => p.playerId !== null && p.playerId !== undefined).length : 0;
+  const made = DS ? DS.picks.filter(hasPick).length : 0;
   const msg = made
     ? `Reset the draft?\n\n${made} pick${made===1?'':'s'} will be permanently erased for everyone in the league. This cannot be undone.\n\nTip: hit Export first if you want to keep the results.`
     : 'Reset the draft and return to setup for everyone?';
@@ -1572,6 +1608,8 @@ let L={
   ti:null,tmax:120,tleft:0,lastPick:-1,
 };
 
+function hasPick(p){ return p && p.playerId !== null && p.playerId !== undefined; }
+
 function el(id){ return document.getElementById(id); }
 function showNavButtons(){
   ['nav-btn','quickpause-btn'].forEach(i => { const e = el(i); if(e) e.style.display = 'flex'; });
@@ -1737,7 +1775,7 @@ function renderDraftFromDS(){
   const cur=DS.currentPickIdx,total=DS.picks.length;
   const cp=DS.picks[cur],ct=DS.teams[cp.teamIdx];
   const isMe=L.claimed!==null&&ct.id===L.claimed;
-  const pickedN=DS.picks.filter(p=>p.playerId!==null).length;
+  const pickedN=DS.picks.filter(hasPick).length;
   document.getElementById('draft-stats').innerHTML=`
     <div class="stat-box"><div class="stat-num">${pickedN}</div><div class="stat-lbl">Picks Made</div></div>
     <div class="stat-box"><div class="stat-num">${total-pickedN}</div><div class="stat-lbl">Remaining</div></div>
@@ -1751,7 +1789,7 @@ function renderDraftFromDS(){
         <div class="clock-team">${ct.name}</div>
         <div class="clock-meta">Pick ${cur+1} of ${total} &nbsp;&middot;&nbsp; Round ${cp.round}</div>
       </div>
-      ${isMe?'<div class="my-turn-badge">&#9650; YOUR PICK</div>':(DS.auto&&DS.auto[ct.id]?'<div class="auto-tag" style="padding:5px 12px;font-size:12px;">AUTODRAFT</div>':'')}
+      ${isMe?'<div class="my-turn-badge">&#9650; YOUR PICK</div>':(DS.auto&&DS.auto[ct.id]?'<div class="auto-tag" style="padding:5px 12px;font-size:12px;">AUTODRAFT</div>':(isCommish()&&DS.pin?'<div class="commish-tag" style="padding:5px 12px;font-size:12px;">COMMISH</div>':''))}
     </div>`;
   const pb = document.getElementById('paused-bar');
   if(pb) pb.classList.toggle('on', !!DS.paused);
@@ -1774,7 +1812,7 @@ function renderBoard(cur){
   rounds.forEach(r=>{
     html+=`<div class="round-hdr">Round ${r}</div>`;
     DS.picks.filter(p=>p.round===r).forEach(p=>{
-      const done=p.playerId!==null;
+      const done=hasPick(p);
       const isCur=!done&&DS.picks[cur]?.pickNum===p.pickNum;
       const pl=done?DS.rookies.find(rk=>rk.id===p.playerId):null;
       const ci=p.teamIdx%AC.length,[abg,atxt]=AC[ci];
@@ -1796,7 +1834,7 @@ function renderBoard(cur){
 }
 function renderPlayers(){
   if(!DS)return;
-  const pickedIds=new Set(DS.picks.filter(p=>p.playerId!==null).map(p=>p.playerId));
+  const pickedIds=new Set(DS.picks.filter(hasPick).map(p=>p.playerId));
   const cur=DS.currentPickIdx;
   const onClockTeam = cur<DS.picks.length ? DS.teams[DS.picks[cur].teamIdx] : null;
   const mine = L.claimed!==null && onClockTeam && onClockTeam.id===L.claimed;
@@ -1837,7 +1875,7 @@ function renderTeamView(){
   if(!DS)return;
   const tid=parseInt(document.getElementById('view-team').value);
   if(isNaN(tid)){document.getElementById('team-view').innerHTML='';return;}
-  const picks=DS.picks.filter(p=>DS.teams[p.teamIdx].id===tid&&p.playerId!==null);
+  const picks=DS.picks.filter(p=>DS.teams[p.teamIdx].id===tid&&hasPick(p));
   if(!picks.length){document.getElementById('team-view').innerHTML='<p style="color:var(--text2);font-size:13px;">No picks yet.</p>';return;}
   const byPos={QB:[],RB:[],WR:[],TE:[]};
   picks.forEach(p=>{const pl=DS.rookies.find(r=>r.id===p.playerId);if(pl)byPos[pl.pos]?.push({...pl,round:p.round,pickNum:p.pickNum});});
