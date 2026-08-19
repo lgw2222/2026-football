@@ -85,6 +85,39 @@ select option{background:var(--bg3);}
 .pe-row.locked{opacity:.45;}
 .pe-traded{font-size:10px;font-family:var(--fh);font-weight:700;letter-spacing:.5px;color:var(--accent);background:rgba(232,160,32,.12);border:1px solid rgba(232,160,32,.3);border-radius:3px;padding:2px 6px;white-space:nowrap;}
 .pe-taken{font-size:11px;color:var(--text3);white-space:nowrap;}
+#chat-fab{position:fixed;right:18px;bottom:18px;z-index:520;background:var(--accent);color:#000;border:none;border-radius:50%;width:54px;height:54px;font-size:22px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;}
+#chat-fab.on{display:flex;}
+#chat-fab:hover{background:#f0ac28;}
+#chat-badge{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;font-family:var(--fb);font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:10px;display:none;align-items:center;justify-content:center;padding:0 5px;}
+#chat-badge.on{display:flex;}
+#chat-panel{position:fixed;right:18px;bottom:82px;z-index:521;width:340px;max-width:calc(100vw - 36px);height:440px;max-height:calc(100vh - 120px);background:var(--bg2);border:1px solid var(--border2);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden;}
+#chat-panel.on{display:flex;}
+.chat-hd{display:flex;align-items:center;gap:9px;padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.chat-ttl{font-family:var(--fh);font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;flex:1;}
+.chat-who{font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;}
+.chat-who:hover{color:var(--accent);}
+#chat-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px;}
+#chat-msgs::-webkit-scrollbar{width:4px;}
+#chat-msgs::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+.cmsg-n{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:2px;}
+.cmsg-t{font-size:13px;color:var(--text);line-height:1.45;word-wrap:break-word;}
+.cmsg-d{font-size:9.5px;color:var(--text3);margin-top:2px;}
+.cmsg.me .cmsg-n{color:#60a5fa;}
+.cmsg-sys{font-size:11.5px;color:var(--text2);background:var(--bg3);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;padding:6px 10px;line-height:1.45;}
+.chat-in{display:flex;gap:7px;padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;}
+.chat-in input{flex:1;padding:8px 11px;font-size:13px;}
+.chat-empty{color:var(--text3);font-size:12px;text-align:center;padding:24px 10px;line-height:1.6;}
+@media(max-width:600px){
+  #chat-panel{right:10px;left:10px;bottom:78px;width:auto;height:60vh;}
+}
+#paused-bar{background:rgba(232,160,32,.13);border:1px solid rgba(232,160,32,.4);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:none;align-items:center;gap:12px;}
+#paused-bar.on{display:flex;}
+.paused-t{font-family:var(--fh);font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
+.pick-edit{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;flex-shrink:0;}
+.pick-edit:hover{color:var(--accent);background:rgba(232,160,32,.1);}
+#ep-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:650;display:none;align-items:center;justify-content:center;padding:20px;}
+#ep-overlay.open{display:flex;}
+#ep{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:440px;}
 .traded-flag{font-size:10px;font-family:var(--fh);font-weight:700;letter-spacing:.5px;color:var(--accent);}
 #pm-scrim{position:fixed;inset:0;z-index:400;display:none;}
 #pm-scrim.open{display:block;}
@@ -189,6 +222,11 @@ select option{background:var(--bg3);}
       <span class="dot syncing" id="sync-dot"></span>
       <span id="sync-label">Connecting</span>
     </div>
+    <button class="btn btn-sm btn-ghost" id="snd-btn" onclick="toggleSound()" title="Sound on/off">&#128266;</button>
+    <button class="btn btn-sm btn-ghost" id="pause-btn" onclick="togglePause()" style="display:none;" title="Pause / resume draft">&#10074;&#10074; Pause</button>
+    <button class="btn btn-sm btn-ghost" id="undo-btn" onclick="undoLastPick()" style="display:none;" title="Undo the last pick">&#8630; Undo</button>
+    <button class="btn btn-sm btn-ghost" id="exp-btn" onclick="exportCSV()" style="display:none;" title="Download pick summary">&#11015; Export</button>
+    <button class="btn btn-sm btn-ghost" id="rst-btn" onclick="resetDraft()" style="display:none;" title="Reset draft">&#8635; Reset</button>
     <button class="btn btn-sm btn-ghost" id="trade-btn" onclick="openPickEditor('live')" style="display:none;">&#8646; Trades</button>
     <button class="btn btn-sm btn-ghost" id="nav-btn" onclick="goSetup()" style="display:none;">&#9881; Settings</button>
   </div>
@@ -261,6 +299,7 @@ select option{background:var(--bg3);}
 
 <!-- DRAFT -->
 <div id="s-draft" class="screen">
+  <div id="paused-bar"><span class="paused-t">&#10074;&#10074; Draft paused</span><span style="font-size:12px;color:var(--text2);flex:1;">The clock is stopped for everyone. Hit Resume to continue.</span></div>
   <div class="stat-grid" id="draft-stats"></div>
   <div id="clock-card"></div>
   <div id="timer-wrap" style="display:none;">
@@ -306,12 +345,28 @@ select option{background:var(--bg3);}
   <div style="font-size:64px;margin-bottom:16px;">&#127942;</div>
   <div class="done-title">Draft Complete!</div>
   <p style="color:var(--text2);margin-bottom:28px;">All picks are in. Check out the rosters.</p>
-  <button class="btn btn-accent btn-lg" onclick="showAllTeams()">View All Rosters</button>
-  <button class="btn btn-lg" style="margin-left:10px;" onclick="goSetup()">New Draft</button>
+  <button class="btn btn-accent btn-lg" onclick="exportCSV()">&#11015; Download Results</button>
+  <button class="btn btn-lg" style="margin-left:10px;" onclick="showAllTeams()">View Rosters</button>
+  <button class="btn btn-lg" style="margin-left:10px;" onclick="resetDraft()">New Draft</button>
 </div>
 
 </div>
 
+<button id="chat-fab" onclick="toggleChat()" title="League chat">&#128172;<span id="chat-badge"></span></button>
+<div id="chat-panel">
+  <div class="chat-hd">
+    <span class="chat-ttl">&#128172; League Chat</span>
+    <span class="chat-who" id="chat-who" onclick="setChatName(true)"></span>
+    <button class="pm-x" onclick="toggleChat()">&times;</button>
+  </div>
+  <div id="chat-msgs"></div>
+  <div class="chat-in">
+    <input id="chat-input" placeholder="Say something..." maxlength="300"
+           onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn btn-sm btn-accent" onclick="sendChat()">Send</button>
+  </div>
+</div>
+<div id="ep-overlay" onclick="if(event.target===this)closeEditPick()"><div id="ep"></div></div>
 <div id="pe-overlay" onclick="if(event.target===this)closePickEditor()">
   <div id="pe"></div>
 </div>
@@ -782,6 +837,326 @@ function closePlayer(){
 }
 document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closePlayer(); closePickEditor(); } });
 
+// ===== LEAGUE CHAT =====
+let chatRef = null, chatListener = null, CHAT_OPEN = false, CHAT_UNREAD = 0, CHAT_INIT = false;
+
+function esc(s){
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function chatName(){
+  let n = localStorage.getItem('dd_name');
+  if(!n && DS && L.claimed !== null){
+    const t = DS.teams.find(x => x.id === L.claimed);
+    if(t){ n = t.name; localStorage.setItem('dd_name', n); }
+  }
+  return n || '';
+}
+
+function setChatName(force){
+  const cur = chatName();
+  const n = prompt('Display name for chat:', cur || '');
+  if(n && n.trim()){
+    localStorage.setItem('dd_name', n.trim().slice(0,24));
+    updateChatWho();
+  }
+}
+
+function updateChatWho(){
+  const el = document.getElementById('chat-who');
+  if(el) el.textContent = chatName() ? ('as ' + chatName()) : 'set name';
+}
+
+function startChat(){
+  if(!fbDb || CHAT_INIT) return;
+  CHAT_INIT = true;
+  document.getElementById('chat-fab').classList.add('on');
+  chatRef = fbDb.ref('rookies2026_chat');
+  updateChatWho();
+  chatListener = chatRef.limitToLast(120).on('value', snap => {
+    const v = snap.val() || {};
+    const msgs = Object.keys(v).map(k => v[k]).filter(Boolean).sort((a,b) => (a.ts||0)-(b.ts||0));
+    renderChat(msgs);
+    if(!CHAT_OPEN && msgs.length){
+      const lastSeen = parseInt(localStorage.getItem('dd_chat_seen') || '0');
+      const unread = msgs.filter(m => (m.ts||0) > lastSeen && !m.sys).length;
+      CHAT_UNREAD = unread;
+      const b = document.getElementById('chat-badge');
+      b.textContent = unread > 99 ? '99+' : unread;
+      b.classList.toggle('on', unread > 0);
+      if(unread > 0) beep(700, 0.06, 0.07);
+    }
+  }, () => {});
+}
+
+function renderChat(msgs){
+  const box = document.getElementById('chat-msgs');
+  if(!box) return;
+  const me = chatName();
+  if(!msgs.length){
+    box.innerHTML = '<div class="chat-empty">No messages yet.<br>Talk trash, negotiate trades, complain about the clock.</div>';
+    return;
+  }
+  const wasBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  box.innerHTML = msgs.map(m => {
+    if(m.sys) return '<div class="cmsg-sys">' + esc(m.text) + '</div>';
+    return '<div class="cmsg' + (m.name === me ? ' me' : '') + '">' +
+      '<div class="cmsg-n">' + esc(m.name) + '</div>' +
+      '<div class="cmsg-t">' + esc(m.text) + '</div>' +
+      '<div class="cmsg-d">' + fmtTime(m.ts) + '</div></div>';
+  }).join('');
+  if(wasBottom || CHAT_OPEN) box.scrollTop = box.scrollHeight;
+}
+
+function fmtTime(ts){
+  if(!ts) return '';
+  try{ return new Date(ts).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
+  catch(e){ return ''; }
+}
+
+async function sendChat(){
+  const inp = document.getElementById('chat-input');
+  const text = (inp.value || '').trim();
+  if(!text || !chatRef) return;
+  let name = chatName();
+  if(!name){
+    setChatName();
+    name = chatName();
+    if(!name) return;
+  }
+  inp.value = '';
+  try{
+    await chatRef.push({ name: name.slice(0,24), text: text.slice(0,300), ts: Date.now() });
+  }catch(e){ alert('Message failed to send.'); }
+}
+
+async function sysChat(text){
+  if(!chatRef) return;
+  try{ await chatRef.push({ sys: true, text: text.slice(0,200), ts: Date.now() }); }catch(e){}
+}
+
+function toggleChat(){
+  CHAT_OPEN = !CHAT_OPEN;
+  document.getElementById('chat-panel').classList.toggle('on', CHAT_OPEN);
+  if(CHAT_OPEN){
+    CHAT_UNREAD = 0;
+    document.getElementById('chat-badge').classList.remove('on');
+    localStorage.setItem('dd_chat_seen', String(Date.now()));
+    updateChatWho();
+    const box = document.getElementById('chat-msgs');
+    if(box) box.scrollTop = box.scrollHeight;
+    const inp = document.getElementById('chat-input');
+    if(inp) setTimeout(() => inp.focus(), 60);
+    audioCtx();
+  }
+}
+
+// ===== PAUSE =====
+async function togglePause(){
+  if(!DS) return;
+  DS.paused = !DS.paused;
+  if(DS.paused) stopTimer(); else L.lastPick = -1;
+  sysChat(DS.paused ? 'Draft paused by the commissioner.' : 'Draft resumed.');
+  await saveDS();
+  renderDraftFromDS();
+}
+
+// ===== UNDO =====
+async function undoLastPick(){
+  if(!DS) return;
+  if(DS.currentPickIdx <= 0){ alert('Nothing to undo - the draft is on the first pick.'); return; }
+  const idx = DS.currentPickIdx - 1;
+  const prev = DS.picks[idx];
+  const pl = (prev.playerId !== null && prev.playerId !== undefined)
+    ? DS.rookies.find(r => r.id === prev.playerId) : null;
+  const who = DS.teams[prev.teamIdx].name;
+  const what = pl ? (who + ' selecting ' + pl.name) : (who + "'s skipped pick");
+  if(!confirm('Undo pick ' + prev.pickNum + '?\n\n' + what + ' will be reversed and the clock goes back to that team.')) return;
+  prev.playerId = null;
+  DS.currentPickIdx = idx;
+  DS.done = false;
+  L.lastPick = -1; LAST_TURN = -1;
+  await saveDS();
+  renderDraftFromDS();
+}
+
+// ===== EDIT A COMPLETED PICK =====
+let EPI = null;
+
+function openEditPick(i){
+  if(!DS) return;
+  EPI = i;
+  const p = DS.picks[i];
+  const takenIds = new Set(DS.picks.filter((x,j) => j !== i && x.playerId !== null && x.playerId !== undefined).map(x => x.playerId));
+  const avail = DS.rookies.filter(r => !takenIds.has(r.id))
+    .sort((a,b) => (a.rank||999)-(b.rank||999) || a.name.localeCompare(b.name));
+  const cur = p.playerId;
+  document.getElementById('ep').innerHTML =
+    '<div class="pe-top"><div style="flex:1;">' +
+      '<div class="pe-title">Edit pick ' + p.pickNum + '</div>' +
+      '<div style="font-size:12px;color:var(--text2);margin-top:3px;">Round ' + p.round + ' &middot; ' + DS.teams[p.teamIdx].name + '</div>' +
+    '</div><button class="pm-x" onclick="closeEditPick()">&times;</button></div>' +
+    '<div class="pe-body" style="max-height:none;">' +
+      '<label class="lbl">Player selected</label>' +
+      '<select id="ep-sel"><option value="">- No pick (leave empty) -</option>' +
+      avail.map(r => '<option value="' + r.id + '"' + (r.id===cur?' selected':'') + '>' +
+        r.name + ' (' + r.pos + ', ' + r.nfl + ')' + (r.rank?' - #'+r.rank:'') + '</option>').join('') +
+      '</select>' +
+      '<p style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.5;">Changing this updates the board for everyone. Players already taken by other teams are not listed.</p>' +
+    '</div>' +
+    '<div class="pe-foot"><button class="btn" onclick="closeEditPick()">Cancel</button>' +
+    '<button class="btn btn-accent" onclick="saveEditPick()">Save</button></div>';
+  document.getElementById('ep-overlay').classList.add('open');
+}
+
+async function saveEditPick(){
+  if(EPI === null || !DS) return;
+  const v = document.getElementById('ep-sel').value;
+  DS.picks[EPI].playerId = v === '' ? null : parseInt(v);
+  closeEditPick();
+  await saveDS();
+  renderDraftFromDS();
+}
+
+function closeEditPick(){
+  document.getElementById('ep-overlay').classList.remove('open');
+  EPI = null;
+}
+
+// ===== SOUND =====
+let SND = localStorage.getItem('dd_snd') !== 'off';
+let AC_CTX = null, LAST_TURN = -1, LAST_TICK = -1;
+
+function audioCtx(){
+  if(!AC_CTX){
+    try{ AC_CTX = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; }
+  }
+  if(AC_CTX.state === 'suspended') AC_CTX.resume();
+  return AC_CTX;
+}
+
+function beep(freq, dur, vol, type){
+  if(!SND) return;
+  const ctx = audioCtx(); if(!ctx) return;
+  try{
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0, ctx.currentTime);
+    g.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + dur + 0.02);
+  }catch(e){}
+}
+
+function sndTick(urgent){ beep(urgent ? 1100 : 820, 0.05, urgent ? 0.16 : 0.07, 'square'); }
+function sndPick(){ beep(660,0.09,0.12); setTimeout(()=>beep(880,0.12,0.12),90); }
+function sndYourTurn(){
+  [0,140,280].forEach((d,i) => setTimeout(()=>beep([784,988,1319][i], 0.22, 0.2, 'triangle'), d));
+  try{
+    if('Notification' in window && Notification.permission === 'granted'){
+      new Notification("You're on the clock!", { body: 'Your pick is up in the rookie draft.' });
+    }
+  }catch(e){}
+}
+
+function toggleSound(){
+  SND = !SND;
+  localStorage.setItem('dd_snd', SND ? 'on' : 'off');
+  document.getElementById('snd-btn').innerHTML = SND ? '&#128266;' : '&#128263;';
+  if(SND){
+    beep(880,0.1,0.12);
+    try{
+      if('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+    }catch(e){}
+  }
+}
+
+// ===== EXPORT =====
+function csvCell(v){
+  const s = String(v === null || v === undefined ? '' : v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+
+function exportCSV(){
+  if(!DS){ alert('No draft to export yet.'); return; }
+  const rows = [];
+  rows.push(['Overall Pick','Round','Slot','Team','Player','Pos','NFL Team','College','NFL Draft','Dynasty Rank','Traded From']);
+  const n = DS.teams.length;
+  DS.picks.forEach((p,i) => {
+    const pl = (p.playerId !== null && p.playerId !== undefined)
+      ? DS.rookies.find(r => r.id === p.playerId) : null;
+    const slot = p.round + '.' + String(i % n + 1).padStart(2,'0');
+    const traded = (p.origTeamIdx !== undefined && p.origTeamIdx !== p.teamIdx)
+      ? DS.teams[p.origTeamIdx].name : '';
+    rows.push([
+      p.pickNum, p.round, slot,
+      DS.teams[p.teamIdx].name,
+      pl ? pl.name : '(no pick)',
+      pl ? pl.pos : '',
+      pl ? pl.nfl : '',
+      pl ? pl.college : '',
+      pl ? (pl.udfa ? 'UDFA' : (pl.su ? 'Late round' : 'Rd '+pl.rd+' Pk '+pl.pk)) : '',
+      pl && pl.rank ? '#'+pl.rank+' '+pl.pr : '',
+      traded
+    ]);
+  });
+  // blank line, then roster-by-team summary
+  rows.push([]);
+  rows.push(['ROSTER SUMMARY BY TEAM']);
+  rows.push(['Team','Player','Pos','NFL Team','Round','Overall Pick']);
+  DS.teams.forEach(t => {
+    const mine = DS.picks.filter(p => p.teamIdx === t.id && p.playerId !== null && p.playerId !== undefined);
+    if(!mine.length){ rows.push([t.name,'(no picks made)','','','','']); return; }
+    mine.forEach(p => {
+      const pl = DS.rookies.find(r => r.id === p.playerId);
+      rows.push([t.name, pl?pl.name:'', pl?pl.pos:'', pl?pl.nfl:'', p.round, p.pickNum]);
+    });
+  });
+
+  const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+  const stamp = new Date().toISOString().slice(0,10);
+  const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rookie-draft-results-' + stamp + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+// ===== RESET =====
+async function resetDraft(){
+  const made = DS ? DS.picks.filter(p => p.playerId !== null && p.playerId !== undefined).length : 0;
+  const msg = made
+    ? `Reset the draft?\n\n${made} pick${made===1?'':'s'} will be permanently erased for everyone in the league. This cannot be undone.\n\nTip: hit Export first if you want to keep the results.`
+    : 'Reset the draft and return to setup for everyone?';
+  if(!confirm(msg)) return;
+  if(made > 0 && !confirm('Are you sure? This wipes all ' + made + ' picks for every manager.')) return;
+  stopTimer();
+  try{
+    if(fbListener && fbRef) fbRef.off('value', fbListener);
+    fbListener = null;
+    if(fbRef) await fbRef.remove();
+  }catch(e){}
+  try{ if(chatListener&&chatRef) chatRef.off('value',chatListener); if(chatRef) await chatRef.remove(); }catch(e){}
+  chatListener=null; CHAT_INIT=false; CHAT_OPEN=false;
+  document.getElementById('chat-fab').classList.remove('on');
+  document.getElementById('chat-panel').classList.remove('on');
+  DS = null;
+  L.claimed = null; L.customPicks = null; L.customSig = null; L.lastPick = -1;
+  LAST_TURN = -1; LAST_TICK = -1;
+  L.rookies = DEFAULT_ROOKIES.map(r => ({...r}));
+  ['exp-btn','rst-btn','trade-btn','pause-btn','undo-btn'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.style.display='none';
+  });
+  resetTeams(); renderSetupPool(); updateTradeSummary();
+  show('s-setup');
+  setSS('live','Live');
+}
+
 const FEEDNEWS = {};
 const FEEDS = [
   {url:'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=50', src:'ESPN NFL'},
@@ -980,6 +1355,7 @@ function setSS(status,label){
 
 // ── INIT — auto-connects on page load ────────────────────────────────────
 (function init(){
+  const sb=document.getElementById('snd-btn'); if(sb) sb.innerHTML = SND ? '&#128266;' : '&#128263;';
   try{
     fbApp=firebase.initializeApp(FB_CFG,'dynastyDraft');
     fbDb=firebase.database(fbApp);
@@ -991,7 +1367,7 @@ function setSS(status,label){
   setSS('syncing','Connecting...');
   fbRef.once('value').then(snap=>{
     const ex=snap.val();
-    document.getElementById('nav-btn').style.display='flex';document.getElementById('trade-btn').style.display='flex';
+    document.getElementById('nav-btn').style.display='flex';document.getElementById('trade-btn').style.display='flex';['exp-btn','rst-btn','pause-btn','undo-btn'].forEach(i=>{const e=document.getElementById(i);if(e)e.style.display='flex';});
     setSS('live','Live');
     if(ex&&ex.started){
       DS=ex;L.tmax=ex.timerSecs||120;
@@ -1098,7 +1474,7 @@ async function launchDraft(){
 
 // ── DRAFT ─────────────────────────────────────────────────────────────────
 function enterDraft(){
-  show('s-draft');populateClaimSelect();startListening();renderDraftFromDS();
+  show('s-draft');populateClaimSelect();startListening();renderDraftFromDS();startChat();
 }
 function populateClaimSelect(){
   if(!DS)return;
@@ -1106,7 +1482,7 @@ function populateClaimSelect(){
   if(L.claimed!==null)document.getElementById('claim-sel').value=L.claimed;
   document.getElementById('view-team').innerHTML='<option value="">— Select a team —</option>'+DS.teams.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
 }
-function claimTeam(val){L.claimed=val===''?null:parseInt(val);renderDraftFromDS();}
+function claimTeam(val){L.claimed=val===''?null:parseInt(val);if(L.claimed!==null&&!localStorage.getItem('dd_name')){const t=DS.teams.find(x=>x.id===L.claimed);if(t){localStorage.setItem('dd_name',t.name);updateChatWho();}}renderDraftFromDS();}
 function renderDraftFromDS(){
   if(!DS)return;
   if(DS.done||DS.currentPickIdx>=DS.picks.length){stopTimer();show('s-done');return;}
@@ -1129,7 +1505,18 @@ function renderDraftFromDS(){
       </div>
       ${isMe?'<div class="my-turn-badge">&#9650; YOUR PICK</div>':''}
     </div>`;
-  if(DS.timerSecs>0&&L.lastPick!==cur){L.lastPick=cur;L.tleft=DS.timerSecs;L.tmax=DS.timerSecs;startTimer();}
+  const pb = document.getElementById('paused-bar');
+  if(pb) pb.classList.toggle('on', !!DS.paused);
+  const pbtn = document.getElementById('pause-btn');
+  if(pbtn) pbtn.innerHTML = DS.paused ? '&#9654; Resume' : '&#10074;&#10074; Pause';
+
+  if(DS.paused){
+    stopTimer();
+  } else {
+    if(isMe && LAST_TURN !== cur){ LAST_TURN = cur; sndYourTurn(); }
+    if(!isMe) LAST_TURN = -1;
+    if(DS.timerSecs>0&&L.lastPick!==cur){L.lastPick=cur;L.tleft=DS.timerSecs;L.tmax=DS.timerSecs;startTimer();}
+  }
   renderBoard(cur);renderPlayers();
 }
 function renderBoard(cur){
@@ -1150,6 +1537,7 @@ function renderBoard(cur){
           ${done&&pl?`<div class="pick-player">${pl.name} <span class="tag tag-${pl.pos}">${pl.pos}</span></div>`:''}
         </div>
         ${isCur?'<span style="font-size:11px;font-weight:700;color:var(--accent);">On Clock</span>':''}
+        ${done?`<button class="pick-edit" title="Edit this pick" onclick="openEditPick(${DS.picks.indexOf(p)})">&#9998;</button>`:''}
       </div>`;
     });
   });
@@ -1161,7 +1549,7 @@ function renderPlayers(){
   if(!DS)return;
   const pickedIds=new Set(DS.picks.filter(p=>p.playerId!==null).map(p=>p.playerId));
   const cur=DS.currentPickIdx;
-  const isMyTurn=L.claimed!==null&&cur<DS.picks.length&&DS.teams[DS.picks[cur].teamIdx].id===L.claimed;
+  const isMyTurn=!DS.paused&&L.claimed!==null&&cur<DS.picks.length&&DS.teams[DS.picks[cur].teamIdx].id===L.claimed;
   const avail=filt(DS.rookies,L.df,document.getElementById('draft-search')?.value||'').filter(r=>!pickedIds.has(r.id)).sort(byBoard);
   document.getElementById('players-list').innerHTML=avail.map((r,i)=>`
     <div class="prow">
@@ -1177,6 +1565,7 @@ function renderPlayers(){
 }
 async function makePick(playerId){
   if(!DS||!fbRef)return;
+  if(DS.paused){ alert('The draft is paused.'); return; }
   const cur=DS.currentPickIdx;
   if(cur>=DS.picks.length)return;
   const snap=await fbRef.once('value');
@@ -1186,6 +1575,10 @@ async function makePick(playerId){
   DS.currentPickIdx=cur+1;
   if(DS.currentPickIdx>=DS.picks.length)DS.done=true;
   stopTimer();L.lastPick=DS.currentPickIdx;
+  sndPick();
+  const _pl=DS.rookies.find(r=>r.id===playerId);
+  const _tm=DS.teams[DS.picks[cur].teamIdx];
+  if(_pl&&_tm) sysChat(`Pick ${cur+1}: ${_tm.name} selects ${_pl.name} (${_pl.pos}, ${_pl.nfl})`);
   await saveDS();renderDraftFromDS();
   showTab('board',document.querySelector('.tab'));
 }
@@ -1218,7 +1611,13 @@ function startTimer(){
   stopTimer();if(!DS||!DS.timerSecs)return;
   document.getElementById('timer-wrap').style.display='block';
   updateTimer();
-  L.ti=setInterval(()=>{L.tleft--;updateTimer();if(L.tleft<=0){stopTimer();autoSkip();}},1000);
+  L.ti=setInterval(()=>{
+    L.tleft--;
+    updateTimer();
+    if(L.tleft<=10 && L.tleft>0) sndTick(true);
+    else if(L.tleft<=30 && L.tleft>0 && L.tleft%5===0) sndTick(false);
+    if(L.tleft<=0){stopTimer();autoSkip();}
+  },1000);
 }
 function updateTimer(){
   document.getElementById('timer-txt').textContent=Math.max(0,L.tleft)+'s';
