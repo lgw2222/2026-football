@@ -693,16 +693,31 @@ function renderPmTab(){
   }
 
   if(PMTAB === 'news'){
-    if(loading){ box.innerHTML = '<div class="pm-load"><span class="pm-spin"></span> Loading news&hellip;</div>'; return; }
-    if(info && info.news && info.news.length){
-      box.innerHTML = info.news.slice(0,6).map(n =>
+    const items = (info && info.news) || [];
+    const feedItems = FEEDNEWS[p.id];
+    if(loading || feedItems === undefined){
+      box.innerHTML = '<div class="pm-load"><span class="pm-spin"></span> Searching news feeds&hellip;</div>';
+      if(feedItems === undefined) loadFeedNews(p);
+      return;
+    }
+    const all = items.concat(feedItems || []);
+    const seen = {}, uniq = [];
+    all.forEach(n => { const k=(n.title||'').slice(0,60); if(!seen[k]){seen[k]=1;uniq.push(n);} });
+    if(uniq.length){
+      box.innerHTML = uniq.slice(0,8).map(n =>
         `<a class="pm-news" href="${n.url}" target="_blank" rel="noopener">
            <div class="pm-news-t">${n.title}</div>
            ${n.desc ? `<div class="pm-news-d">${n.desc}</div>` : ''}
-           ${n.date ? `<div class="pm-news-d">${n.date}</div>` : ''}
+           <div class="pm-news-d">${[n.src,n.date].filter(Boolean).join(' &middot; ')}</div>
          </a>`).join('');
     } else {
-      box.innerHTML = '<div class="pm-muted">No ESPN news found for this player yet.</div>';
+      const q = encodeURIComponent(p.name + ' NFL');
+      box.innerHTML = '<div class="pm-muted">Nothing in the ESPN NFL or college feeds mentions this player right now. '
+        + 'That is normal for late-round and undrafted rookies before the season starts.</div>'
+        + `<div class="pm-links" style="margin-top:10px;">
+             <a class="pm-link" href="https://news.google.com/search?q=${q}" target="_blank" rel="noopener">Search Google News</a>
+             <a class="pm-link" href="https://www.google.com/search?q=${q}&tbm=nws" target="_blank" rel="noopener">More sources</a>
+           </div>`;
     }
     return;
   }
@@ -766,6 +781,50 @@ function closePlayer(){
   document.getElementById('pm-scrim').classList.remove('open');
 }
 document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closePlayer(); closePickEditor(); } });
+
+const FEEDNEWS = {};
+const FEEDS = [
+  {url:'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=50', src:'ESPN NFL'},
+  {url:'https://site.api.espn.com/apis/site/v2/sports/football/college-football/news?limit=50', src:'ESPN CFB'}
+];
+let FEEDCACHE = null;
+
+async function loadFeedNews(p){
+  if(FEEDNEWS[p.id] !== undefined) return;
+  FEEDNEWS[p.id] = null;
+  try{
+    if(FEEDCACHE === null){
+      FEEDCACHE = 'loading';
+      const all = [];
+      for(const f of FEEDS){
+        try{
+          const r = await fetch(f.url);
+          const j = await r.json();
+          (j.articles || []).forEach(a => {
+            const url = a.links && a.links.web && a.links.web.href;
+            if(a.headline && url) all.push({
+              title: a.headline,
+              desc: (a.description || '').slice(0,150),
+              url, src: f.src, date: fmtDate(a.published)
+            });
+          });
+        }catch(e){}
+      }
+      FEEDCACHE = all;
+    }
+    while(FEEDCACHE === 'loading'){ await new Promise(r => setTimeout(r,150)); }
+    const last = p.name.split(' ').filter(w => w.length > 2).pop().replace(/[^A-Za-z]/g,'');
+    const first = p.name.split(' ')[0].replace(/[^A-Za-z]/g,'');
+    const hits = FEEDCACHE.filter(n => {
+      const t = (n.title + ' ' + n.desc);
+      return last && t.includes(last) && (t.includes(first) || t.includes(last));
+    });
+    FEEDNEWS[p.id] = hits;
+  }catch(e){
+    FEEDNEWS[p.id] = [];
+  }
+  if(PMP && PMP.id === p.id){ renderPmTab(); positionPm(_lastEv); }
+}
 
 async function loadEspn(p){
   try{
