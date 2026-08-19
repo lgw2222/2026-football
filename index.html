@@ -264,10 +264,6 @@ select option{background:var(--bg3);}
       <div class="field"><label class="lbl">Rounds</label><input type="number" id="cfg-rounds" value="5" min="1" max="10" oninput="updateTradeSummary()"></div>
       <div class="field"><label class="lbl">Seconds/pick (0=off)</label><input type="number" id="cfg-timer" value="120" min="0" max="600"></div>
     </div>
-    <div class="field"><label class="lbl">Commissioner PIN (optional)</label>
-      <input type="text" id="cfg-pin" placeholder="Leave blank for no PIN" maxlength="12">
-      <p style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.5;">Set a PIN to keep pause, undo, trades, autodraft and reset limited to you. Anyone without it can still draft their own team.</p>
-    </div>
     <div class="field"><label class="lbl">Draft Order</label>
       <select id="cfg-type" onchange="updateTradeSummary();document.getElementById('order-desc').textContent=this.value;"><option value="snake">Snake (reverses each round)</option><option value="linear">Linear (same order every round)</option></select>
     </div>
@@ -391,6 +387,10 @@ select option{background:var(--bg3);}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
+// ── COMMISSIONER PIN ──────────────────────────────────────────────────────
+// Change this value to change the PIN for your league.
+const COMMISH_PIN = '1309';
+
 // ── FIREBASE CONFIG (hardcoded — no setup needed) ─────────────────────────
 const FB_CFG = {
   apiKey: "AIzaSyDp_M2KwYCdSFvdxhScOyd1jbtb9FZMivw",
@@ -853,20 +853,18 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closePlayer(
 
 // ===== COMMISSIONER =====
 function isCommish(){
-  if(!DS) return false;
-  if(!DS.pin) return true;                       // no PIN set = open league
-  return localStorage.getItem('dd_commish') === DS.pin;
+  return localStorage.getItem('dd_commish') === COMMISH_PIN;
 }
 
 function unlockCommish(){
-  if(!DS || !DS.pin) return;
   const v = prompt('Enter the commissioner PIN:');
   if(v === null) return;
-  if(v.trim() === DS.pin){
-    localStorage.setItem('dd_commish', DS.pin);
+  if(v.trim() === COMMISH_PIN){
+    localStorage.setItem('dd_commish', COMMISH_PIN);
     alert('Commissioner controls unlocked on this device.');
-    openDraftSettings();
+    closeDraftSettings();
     renderDraftFromDS();
+    openDraftSettings();
   } else {
     alert('That PIN did not match.');
   }
@@ -876,32 +874,7 @@ function lockCommish(){
   localStorage.removeItem('dd_commish');
   closeDraftSettings();
   renderDraftFromDS();
-}
-
-async function setPin(){
-  if(!DS) return;
-  const v = prompt('Set a commissioner PIN (numbers or letters, up to 12 characters):', DS.pin || '');
-  if(v === null) return;
-  const pin = v.trim().slice(0,12);
-  if(!pin){ alert('PIN cannot be blank. Use Remove PIN if you want it open.'); return; }
-  DS.pin = pin;
-  localStorage.setItem('dd_commish', pin);
-  await saveDS();
-  sysChat('Commissioner controls are now PIN protected.');
-  openDraftSettings();
-  renderDraftFromDS();
-  alert('PIN set to: ' + pin + '\n\nThis device is unlocked. Other managers can now only draft their own team.');
-}
-
-async function clearPin(){
-  if(!DS) return;
-  if(!confirm('Remove the PIN?\n\nEveryone in the league will be able to pause, undo, autodraft and draft for any team.')) return;
-  DS.pin = '';
-  localStorage.removeItem('dd_commish');
-  await saveDS();
-  sysChat('Commissioner PIN removed - controls are open to everyone.');
-  openDraftSettings();
-  renderDraftFromDS();
+  alert('Commissioner controls locked on this device. Enter the PIN in Settings to unlock again.');
 }
 
 // ===== AUTODRAFT =====
@@ -989,7 +962,7 @@ function openDraftSettings(){
         '<div style="font-size:12px;color:var(--text2);margin-top:3px;">' + made + ' of ' + DS.picks.length + ' picks made</div>' +
       '</div><button class="pm-x" onclick="closeDraftSettings()">&times;</button></div>' +
       '<div class="ds-sec"><div class="ds-h">Commissioner only</div>' +
-        '<p style="font-size:13px;color:var(--text2);line-height:1.6;">Pause, undo, trades, autodraft and reset are locked to the commissioner for this league.</p>' +
+        '<p style="font-size:13px;color:var(--text2);line-height:1.6;">Pause, undo, trades, autodraft and reset are limited to the commissioner. You can still draft your own team, chat, and download results.</p>' +
         '<div class="ds-row" style="margin-top:12px;">' +
           '<button class="btn btn-accent" onclick="unlockCommish()">Enter commissioner PIN</button>' +
           '<button class="btn" onclick="exportCSV()">&#11015; Download results</button>' +
@@ -1051,13 +1024,9 @@ function openDraftSettings(){
     '</div>' +
 
     '<div class="ds-sec"><div class="ds-h">Commissioner access</div>' +
-      (DS.pin
-        ? '<p style="font-size:13px;color:var(--text2);line-height:1.6;">A PIN is set. Only devices that entered it can pause, undo, autodraft, edit picks or draft for other teams.</p>'
-        : '<p style="font-size:13px;color:var(--text2);line-height:1.6;">No PIN set &mdash; <strong style="color:var(--accent);">everyone in your league can draft for any team.</strong> Set one to lock these controls to you.</p>') +
+      '<p style="font-size:13px;color:var(--text2);line-height:1.6;">This device is <strong style="color:var(--green);">unlocked</strong>. You can pause, undo, edit picks, run autodraft and draft for any team. Everyone else can only draft their own claimed team.</p>' +
       '<div class="ds-row" style="margin-top:12px;">' +
-        '<button class="btn btn-accent" onclick="setPin()">' + (DS.pin ? 'Change PIN' : 'Set commissioner PIN') + '</button>' +
-        (DS.pin ? '<button class="btn" onclick="clearPin()">Remove PIN</button>' : '') +
-        (DS.pin ? '<button class="btn" onclick="lockCommish()">Lock this device</button>' : '') +
+        '<button class="btn" onclick="lockCommish()">Lock this device</button>' +
       '</div>' +
     '</div>' +
 
@@ -1753,7 +1722,7 @@ async function launchDraft(){
     picks = buildOrder(n,rounds,type);
     picks.forEach(p=>{p.origTeamIdx=p.teamIdx;});
   }
-  DS={teams,picks,pin:(document.getElementById('cfg-pin').value||'').trim(),auto:{},autoOnExpire:true,rookies:L.rookies,timerSecs:timer,currentPickIdx:0,started:true,done:false,ts:Date.now()};
+  DS={teams,picks,auto:{},autoOnExpire:true,rookies:L.rookies,timerSecs:timer,currentPickIdx:0,started:true,done:false,ts:Date.now()};
   L.tmax=timer;L.lastPick=-1;
   await saveDS();enterDraft();
 }
@@ -1789,7 +1758,7 @@ function renderDraftFromDS(){
         <div class="clock-team">${ct.name}</div>
         <div class="clock-meta">Pick ${cur+1} of ${total} &nbsp;&middot;&nbsp; Round ${cp.round}</div>
       </div>
-      ${isMe?'<div class="my-turn-badge">&#9650; YOUR PICK</div>':(DS.auto&&DS.auto[ct.id]?'<div class="auto-tag" style="padding:5px 12px;font-size:12px;">AUTODRAFT</div>':(isCommish()&&DS.pin?'<div class="commish-tag" style="padding:5px 12px;font-size:12px;">COMMISH</div>':''))}
+      ${isMe?'<div class="my-turn-badge">&#9650; YOUR PICK</div>':(DS.auto&&DS.auto[ct.id]?'<div class="auto-tag" style="padding:5px 12px;font-size:12px;">AUTODRAFT</div>':(isCommish()?'<div class="commish-tag" style="padding:5px 12px;font-size:12px;">COMMISH</div>':''))}
     </div>`;
   const pb = document.getElementById('paused-bar');
   if(pb) pb.classList.toggle('on', !!DS.paused);
@@ -1917,7 +1886,7 @@ function updateTimer(){
 }
 async function autoSkip(){
   if(!DS||DS.currentPickIdx>=DS.picks.length)return;
-  if(!isCommish() && DS.pin) return;   // let the commissioner device handle expiry
+  if(!isCommish()) return;   // only the commissioner device advances an expired clock
   const cur = DS.currentPickIdx;
   if(DS.autoOnExpire !== false){
     const pick = bestAvailable();
