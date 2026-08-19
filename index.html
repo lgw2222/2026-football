@@ -600,7 +600,7 @@ function openPickEditor(mode){
   picks.forEach(p => { if(p.origTeamIdx === undefined) p.origTeamIdx = p.teamIdx; });
   PE = { mode, picks, teams };
   renderPickEditor();
-  document.getElementById('pe-overlay').classList.add('open');
+  { const o = el('pe-overlay'); if(o) o.classList.add('open'); }
 }
 
 function renderPickEditor(){
@@ -671,7 +671,7 @@ async function savePickOwners(){
 }
 
 function closePickEditor(){
-  document.getElementById('pe-overlay').classList.remove('open');
+  const o = el('pe-overlay'); if(o) o.classList.remove('open');
   PE = null;
 }
 
@@ -726,7 +726,7 @@ function openPlayer(id, ev){
     </div>
     <div class="pm-body" id="pm-body"></div>`;
   pm.classList.add('open');
-  document.getElementById('pm-scrim').classList.add('open');
+  { const s = el('pm-scrim'); if(s) s.classList.add('open'); }
   _lastEv = ev;
   renderPmTab();
   positionPm(ev);
@@ -847,8 +847,7 @@ function positionPm(ev){
 }
 
 function closePlayer(){
-  document.getElementById('pm').classList.remove('open');
-  document.getElementById('pm-scrim').classList.remove('open');
+  ['pm','pm-scrim'].forEach(i=>{const e=el(i);if(e)e.classList.remove('open');});
 }
 document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closePlayer(); closePickEditor(); closeDraftSettings(); closeEditPick(); } });
 
@@ -970,7 +969,7 @@ function openDraftSettings(){
           '<button class="btn" onclick="exportCSV()">&#11015; Download results</button>' +
         '</div>' +
       '</div>';
-    document.getElementById('ds-overlay').classList.add('open');
+    { const o = el('ds-overlay'); if(o) o.classList.add('open'); }
     return;
   }
   document.getElementById('ds').innerHTML =
@@ -1030,11 +1029,11 @@ function openDraftSettings(){
       (DS.pin ? '<button class="btn" onclick="lockCommish()">Lock controls on this device</button>' : '') + '</div>' +
       '<div class="ds-note">Erases all picks and chat for everyone and returns to setup. Export first if you want a record.</div>' +
     '</div>';
-  document.getElementById('ds-overlay').classList.add('open');
+  { const o = el('ds-overlay'); if(o) o.classList.add('open'); }
 }
 
 function closeDraftSettings(){
-  document.getElementById('ds-overlay').classList.remove('open');
+  const o = el('ds-overlay'); if(o) o.classList.remove('open');
 }
 
 async function saveTimer(){
@@ -1103,7 +1102,7 @@ function updateChatWho(){
 function startChat(){
   if(!fbDb || CHAT_INIT) return;
   CHAT_INIT = true;
-  document.getElementById('chat-fab').classList.add('on');
+  { const e = el('chat-fab'); if(e) e.classList.add('on'); }
   chatRef = fbDb.ref('rookies2026_chat');
   updateChatWho();
   chatListener = chatRef.limitToLast(120).on('value', snap => {
@@ -1170,10 +1169,10 @@ async function sysChat(text){
 
 function toggleChat(){
   CHAT_OPEN = !CHAT_OPEN;
-  document.getElementById('chat-panel').classList.toggle('on', CHAT_OPEN);
+  { const p = el('chat-panel'); if(p) p.classList.toggle('on', CHAT_OPEN); }
   if(CHAT_OPEN){
     CHAT_UNREAD = 0;
-    document.getElementById('chat-badge').classList.remove('on');
+    { const b = el('chat-badge'); if(b) b.classList.remove('on'); }
     localStorage.setItem('dd_chat_seen', String(Date.now()));
     updateChatWho();
     const box = document.getElementById('chat-msgs');
@@ -1239,7 +1238,7 @@ function openEditPick(i){
     '</div>' +
     '<div class="pe-foot"><button class="btn" onclick="closeEditPick()">Cancel</button>' +
     '<button class="btn btn-accent" onclick="saveEditPick()">Save</button></div>';
-  document.getElementById('ep-overlay').classList.add('open');
+  { const o = el('ep-overlay'); if(o) o.classList.add('open'); }
 }
 
 async function saveEditPick(){
@@ -1252,7 +1251,7 @@ async function saveEditPick(){
 }
 
 function closeEditPick(){
-  document.getElementById('ep-overlay').classList.remove('open');
+  const o = el('ep-overlay'); if(o) o.classList.remove('open');
   EPI = null;
 }
 
@@ -1297,7 +1296,7 @@ function sndYourTurn(){
 function toggleSound(){
   SND = !SND;
   localStorage.setItem('dd_snd', SND ? 'on' : 'off');
-  document.getElementById('snd-btn').innerHTML = SND ? '&#128266;' : '&#128263;';
+  { const b = el('snd-btn'); if(b) b.innerHTML = SND ? '&#128266;' : '&#128263;'; }
   if(SND){
     beep(880,0.1,0.12);
     try{
@@ -1374,15 +1373,12 @@ async function resetDraft(){
   }catch(e){}
   try{ if(chatListener&&chatRef) chatRef.off('value',chatListener); if(chatRef) await chatRef.remove(); }catch(e){}
   chatListener=null; CHAT_INIT=false; CHAT_OPEN=false;
-  document.getElementById('chat-fab').classList.remove('on');
-  document.getElementById('chat-panel').classList.remove('on');
+  ['chat-fab','chat-panel'].forEach(i=>{const e=el(i);if(e)e.classList.remove('on');});
   DS = null;
   L.claimed = null; L.customPicks = null; L.customSig = null; L.lastPick = -1;
   LAST_TURN = -1; LAST_TICK = -1;
   L.rookies = DEFAULT_ROOKIES.map(r => ({...r}));
-  ['quickpause-btn'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.style.display='none';
-  });
+  hideNavButtons();
   resetTeams(); renderSetupPool(); updateTradeSummary();
   show('s-setup');
   setSS('live','Live');
@@ -1576,6 +1572,14 @@ let L={
   ti:null,tmax:120,tleft:0,lastPick:-1,
 };
 
+function el(id){ return document.getElementById(id); }
+function showNavButtons(){
+  ['nav-btn','quickpause-btn'].forEach(i => { const e = el(i); if(e) e.style.display = 'flex'; });
+}
+function hideNavButtons(){
+  ['quickpause-btn'].forEach(i => { const e = el(i); if(e) e.style.display = 'none'; });
+}
+
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function setSS(status,label){
   const pill=document.getElementById('sync-pill');
@@ -1585,6 +1589,19 @@ function setSS(status,label){
 }
 
 // ── INIT — auto-connects on page load ────────────────────────────────────
+window.addEventListener('error', function(ev){
+  try{
+    const lm = document.getElementById('loading-msg');
+    const loading = document.getElementById('s-loading');
+    if(lm && loading && loading.classList.contains('active')){
+      lm.innerHTML = '<strong style="color:var(--accent);">Something went wrong loading the draft.</strong>'
+        + '<div style="margin-top:12px;font-size:11px;color:var(--text3);font-family:monospace;">'
+        + String(ev.message||'') + '</div>'
+        + '<div style="margin-top:14px;"><button class="btn" onclick="location.reload()">&#8635; Retry</button></div>';
+    }
+  }catch(e){}
+});
+
 (function init(){
   const sb=document.getElementById('snd-btn'); if(sb) sb.innerHTML = SND ? '&#128266;' : '&#128263;';
   try{
@@ -1598,7 +1615,7 @@ function setSS(status,label){
   setSS('syncing','Connecting...');
   fbRef.once('value').then(snap=>{
     const ex=snap.val();
-    document.getElementById('nav-btn').style.display='flex';document.getElementById('trade-btn').style.display='flex';const qp=document.getElementById('quickpause-btn'); if(qp) qp.style.display='flex';
+    showNavButtons();
     setSS('live','Live');
     if(ex&&ex.started){
       DS=ex;L.tmax=ex.timerSecs||120;
