@@ -115,6 +115,25 @@ select option{background:var(--bg3);}
 .paused-t{font-family:var(--fh);font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--accent);}
 .pick-edit{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;flex-shrink:0;}
 .pick-edit:hover{color:var(--accent);background:rgba(232,160,32,.1);}
+#np-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:700;display:none;align-items:center;justify-content:center;padding:20px;}
+#np-overlay.open{display:flex;}
+#np{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:440px;padding:24px;text-align:center;animation:pmIn .18s ease;}
+.np-check{font-size:44px;line-height:1;margin-bottom:10px;}
+.np-h{font-family:var(--fh);font-size:24px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.np-sub{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px;}
+.np-msg{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--text2);text-align:left;line-height:1.55;margin-bottom:16px;max-height:130px;overflow-y:auto;}
+.np-btns{display:flex;flex-direction:column;gap:8px;}
+.notify-bar{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:none;align-items:center;gap:10px;flex-wrap:wrap;}
+.notify-bar.on{display:flex;}
+.notify-t{font-size:13px;color:var(--text);flex:1;min-width:180px;line-height:1.5;}
+.q-row{display:flex;align-items:center;gap:9px;padding:8px 6px;border-bottom:1px solid var(--border);}
+.q-row:last-child{border-bottom:none;}
+.q-n{font-family:var(--fh);font-size:17px;font-weight:900;color:var(--accent);min-width:24px;}
+.q-btn{background:none;border:1px solid var(--border2);color:var(--text2);cursor:pointer;border-radius:5px;padding:3px 7px;font-size:12px;}
+.q-btn:hover{border-color:var(--accent);color:var(--accent);}
+.q-add{background:none;border:1px solid var(--border2);color:var(--text3);cursor:pointer;border-radius:5px;padding:4px 9px;font-size:11px;font-weight:600;flex-shrink:0;}
+.q-add:hover{border-color:var(--green);color:var(--green);}
+.q-add.qd{border-color:var(--green);color:var(--green);}
 .auto-row{display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid var(--border);}
 .auto-row:last-child{border-bottom:none;}
 .auto-row span{flex:1;font-size:13px;}
@@ -262,7 +281,17 @@ select option{background:var(--bg3);}
     <div class="g3">
       <div class="field"><label class="lbl">Teams</label><input type="number" id="cfg-teams" value="12" min="4" max="24" oninput="resetTeams();updateTradeSummary();"></div>
       <div class="field"><label class="lbl">Rounds</label><input type="number" id="cfg-rounds" value="5" min="1" max="10" oninput="updateTradeSummary()"></div>
-      <div class="field"><label class="lbl">Seconds/pick (0=off)</label><input type="number" id="cfg-timer" value="120" min="0" max="600"></div>
+      <div class="field"><label class="lbl">Pick deadline</label>
+        <div style="display:flex;gap:6px;">
+          <input type="number" id="cfg-timer" value="0" min="0" max="999" style="flex:1;">
+          <select id="cfg-unit" style="flex:1.2;">
+            <option value="1000">seconds</option>
+            <option value="60000">minutes</option>
+            <option value="3600000" selected>hours</option>
+          </select>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.5;">Leave at <strong>0</strong> for no clock — people pick whenever they get to it. Set a number only if you want picks auto-taken after a deadline.</p>
+      </div>
     </div>
     <div class="field"><label class="lbl">Draft Order</label>
       <select id="cfg-type" onchange="updateTradeSummary();document.getElementById('order-desc').textContent=this.value;"><option value="snake">Snake (reverses each round)</option><option value="linear">Linear (same order every round)</option></select>
@@ -309,6 +338,7 @@ select option{background:var(--bg3);}
 
 <!-- DRAFT -->
 <div id="s-draft" class="screen">
+  <div class="notify-bar" id="notify-bar"></div>
   <div id="paused-bar"><span class="paused-t">&#10074;&#10074; Draft paused</span><span style="font-size:12px;color:var(--text2);flex:1;">The clock is stopped for everyone. Hit Resume to continue.</span></div>
   <div class="stat-grid" id="draft-stats"></div>
   <div id="clock-card"></div>
@@ -321,8 +351,9 @@ select option{background:var(--bg3);}
     <select id="claim-sel" onchange="claimTeam(this.value)"><option value="">— Tap to claim your team —</option></select>
   </div>
   <div class="tab-bar">
-    <div class="tab active" onclick="showTab('board',this)">Draft Board</div>
+    <div class="tab active" onclick="showTab('board',this)">Board</div>
     <div class="tab" onclick="showTab('players',this)">Available</div>
+    <div class="tab" onclick="showTab('queue',this)">My Queue</div>
     <div class="tab" onclick="showTab('teams',this)">Teams</div>
   </div>
   <div id="tab-board"><div class="board-scroll" id="board-picks"></div></div>
@@ -342,6 +373,7 @@ select option{background:var(--bg3);}
     </div>
     <div class="scrollbox" id="players-list"></div>
   </div>
+  <div id="tab-queue" style="display:none;"></div>
   <div id="tab-teams" style="display:none;">
     <div class="field"><label class="lbl">View team roster</label>
       <select id="view-team" onchange="renderTeamView()" style="margin-bottom:14px;"></select>
@@ -377,6 +409,7 @@ select option{background:var(--bg3);}
     <button class="btn btn-sm btn-accent" onclick="sendChat()">Send</button>
   </div>
 </div>
+<div id="np-overlay"><div id="np"></div></div>
 <div id="ep-overlay" onclick="if(event.target===this)closeEditPick()"><div id="ep"></div></div>
 <div id="pe-overlay" onclick="if(event.target===this)closePickEditor()">
   <div id="pe"></div>
@@ -849,7 +882,7 @@ function positionPm(ev){
 function closePlayer(){
   ['pm','pm-scrim'].forEach(i=>{const e=el(i);if(e)e.classList.remove('open');});
 }
-document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closePlayer(); closePickEditor(); closeDraftSettings(); closeEditPick(); } });
+document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closePlayer(); closePickEditor(); closeDraftSettings(); closeEditPick(); closeNotifyPrompt(); } });
 
 // ===== COMMISSIONER =====
 function isCommish(){
@@ -927,7 +960,7 @@ async function maybeAutodraft(){
     const snap = await fbRef.once('value');
     const fresh = snap.val();
     if(fresh && fresh.currentPickIdx === cur && !fresh.paused){
-      const pick = bestAvailable();
+      const pick = queuePick(DS.picks[cur].teamIdx) || bestAvailable();
       if(pick) await commitPick(pick.id, cur, true);
     }
   }catch(e){}
@@ -942,13 +975,16 @@ async function commitPick(playerId, idx, isAuto){
   DS.picks[idx].playerId = playerId;
   DS.picks[idx].auto = !!isAuto;
   DS.currentPickIdx = idx + 1;
+  DS.deadline = DS.pickMs ? Date.now() + DS.pickMs : 0;
   if(DS.currentPickIdx >= DS.picks.length) DS.done = true;
   stopTimer();
   L.lastPick = DS.currentPickIdx;
-  if(pl && tm) sysChat('Pick ' + (idx+1) + ': ' + tm.name + (isAuto ? ' auto-drafts ' : ' selects ') +
-                       pl.name + ' (' + pl.pos + ', ' + pl.nfl + ')');
+  if(pl && tm){
+    sysChat('Pick ' + (idx+1) + ': ' + tm.name + (isAuto ? ' auto-drafts ' : ' selects ') + pl.name + ' (' + pl.pos + ', ' + pl.nfl + ')');
+  }
   await saveDS();
   renderDraftFromDS();
+  postWebhook(pickBlurb());
 }
 
 // ===== LIVE DRAFT SETTINGS =====
@@ -983,9 +1019,10 @@ function openDraftSettings(){
           (DS.paused ? '&#9654; Resume draft' : '&#10074;&#10074; Pause draft') + '</button>' +
         '<button class="btn" onclick="restartClock()">&#8635; Restart this pick\'s clock</button>' +
       '</div>' +
-      '<div style="margin-top:12px;"><label class="lbl">Seconds per pick (0 = no timer)</label>' +
-      '<div style="display:flex;gap:8px;">' +
-        '<input type="number" id="ds-timer" min="0" max="900" value="' + (DS.timerSecs||0) + '" style="flex:1;">' +
+      '<div style="margin-top:12px;"><label class="lbl">Time per pick</label>' +
+      '<div style="display:flex;gap:6px;">' +
+        '<input type="number" id="ds-timer" min="0" max="999" value="' + dsTimerVal() + '" style="flex:1;">' +
+        '<select id="ds-unit" style="flex:1.2;">' + dsUnitOpts() + '</select>' +
         '<button class="btn btn-accent" onclick="saveTimer()">Apply</button>' +
       '</div></div>' +
     '</div>' +
@@ -1018,6 +1055,18 @@ function openDraftSettings(){
       '<div class="ds-note">Autodraft runs from this device, so keep this page open if anyone is set to auto.</div>' +
     '</div>' +
 
+    '<div class="ds-sec"><div class="ds-h">Notifications</div>' +
+      '<p style="font-size:13px;color:var(--text2);line-height:1.6;">' +
+        (webhookUrl()
+          ? 'Every pick posts automatically to your Discord channel.'
+          : 'Optional: connect a Discord webhook and every pick posts automatically, so nobody has to remember to tell the next person.') +
+      '</p>' +
+      '<div class="ds-row" style="margin-top:12px;">' +
+        '<button class="btn" onclick="setWebhook()">' + (webhookUrl() ? 'Change / remove webhook' : 'Connect Discord webhook') + '</button>' +
+      '</div>' +
+      '<div class="ds-note">Without this, use the green bar on the draft screen to text your group in one tap.</div>' +
+    '</div>' +
+
     '<div class="ds-sec"><div class="ds-h">Export</div>' +
       '<div class="ds-row"><button class="btn" onclick="exportCSV()">&#11015; Download results (CSV)</button></div>' +
       '<div class="ds-note">Opens in Excel. Includes every pick plus a roster summary per team.</div>' +
@@ -1042,21 +1091,39 @@ function closeDraftSettings(){
   const o = el('ds-overlay'); if(o) o.classList.remove('open');
 }
 
+function dsTimerVal(){
+  const ms = DS.pickMs || 0;
+  if(!ms) return 0;
+  if(ms % 3600000 === 0) return ms/3600000;
+  if(ms % 60000 === 0) return ms/60000;
+  return ms/1000;
+}
+function dsUnitOpts(){
+  const ms = DS.pickMs || 0;
+  let sel = 3600000;
+  if(ms && ms % 3600000 !== 0) sel = (ms % 60000 === 0) ? 60000 : 1000;
+  return [[1000,'seconds'],[60000,'minutes'],[3600000,'hours']]
+    .map(u => '<option value="'+u[0]+'"'+(u[0]===sel?' selected':'')+'>'+u[1]+'</option>').join('');
+}
+
 async function saveTimer(){
   if(!DS) return;
-  const v = parseInt(document.getElementById('ds-timer').value);
-  if(isNaN(v) || v < 0){ alert('Enter a number of seconds (0 for no timer).'); return; }
-  DS.timerSecs = v;
-  L.tmax = v; L.tleft = v; L.lastPick = -1;
+  const v = parseInt(el('ds-timer').value);
+  const u = parseInt(el('ds-unit').value) || 3600000;
+  if(isNaN(v) || v < 0){ alert('Enter a number.'); return; }
+  DS.pickMs = v * u;
+  DS.deadline = DS.pickMs ? Date.now() + DS.pickMs : 0;
+  L.lastPick = -1;
   await saveDS();
   renderDraftFromDS();
   closeDraftSettings();
 }
 
 async function restartClock(){
-  if(!DS || !DS.timerSecs) return;
+  if(!DS || !DS.pickMs) return;
+  DS.deadline = Date.now() + DS.pickMs;
   L.lastPick = -1;
-  L.tleft = DS.timerSecs; L.tmax = DS.timerSecs;
+  await saveDS();
   startTimer();
   closeDraftSettings();
 }
@@ -1071,6 +1138,210 @@ async function saveTeamNames(){
   populateClaimSelect();
   renderDraftFromDS();
   closeDraftSettings();
+}
+
+// ===== PERSONAL DRAFT QUEUE =====
+let TAB = 'board';
+
+function myQueue(){
+  if(!DS || L.claimed === null) return [];
+  return (DS.queues && DS.queues[L.claimed]) || [];
+}
+
+function queuePick(teamIdx){
+  if(!DS) return null;
+  const team = DS.teams[teamIdx];
+  if(!team) return null;
+  const q = (DS.queues && DS.queues[team.id]) || [];
+  if(!q.length) return null;
+  const taken = new Set(DS.picks.filter(hasPick).map(p => p.playerId));
+  for(const id of q){
+    if(!taken.has(id)){
+      const pl = DS.rookies.find(r => r.id === id);
+      if(pl) return pl;
+    }
+  }
+  return null;
+}
+
+async function saveQueue(q){
+  if(!DS || L.claimed === null) return;
+  DS.queues = DS.queues || {};
+  DS.queues[L.claimed] = q;
+  await saveDS();
+  renderQueue(); renderPlayers();
+}
+
+async function queueAdd(id){
+  if(L.claimed === null){ alert('Claim your team first, then build your queue.'); return; }
+  const q = myQueue().slice();
+  const i = q.indexOf(id);
+  if(i >= 0) q.splice(i,1); else q.push(id);
+  await saveQueue(q);
+}
+
+async function queueMove(i, dir){
+  const q = myQueue().slice();
+  const j = i + dir;
+  if(j < 0 || j >= q.length) return;
+  [q[i], q[j]] = [q[j], q[i]];
+  await saveQueue(q);
+}
+
+async function queueClear(){
+  if(!confirm('Clear your whole queue?')) return;
+  await saveQueue([]);
+}
+
+function renderQueue(){
+  const box = el('tab-queue');
+  if(!box || !DS) return;
+  if(L.claimed === null){
+    box.innerHTML = '<div class="card"><p style="font-size:13px;color:var(--text2);line-height:1.6;">Claim your team above, then add players here. If your pick comes up while you are away, the app drafts the top player still available from your queue instead of a generic ranking.</p></div>';
+    return;
+  }
+  const q = myQueue();
+  const taken = new Set(DS.picks.filter(hasPick).map(p => p.playerId));
+  const team = DS.teams.find(t => t.id === L.claimed);
+  let html = '<div class="card" style="padding:14px 16px;margin-bottom:14px;">'
+    + '<p style="font-size:13px;color:var(--text2);line-height:1.6;">'
+    + 'Your queue for <strong style="color:var(--text);">' + esc(team ? team.name : '') + '</strong>. '
+    + 'If you are not around when your pick comes up, the app takes the highest player here who is still available. '
+    + 'Add players from the <strong>Available</strong> tab with the <strong>+Q</strong> button.</p>';
+  if(q.length) html += '<button class="btn btn-sm" style="margin-top:10px;" onclick="queueClear()">Clear queue</button>';
+  html += '</div>';
+
+  if(!q.length){
+    html += '<div class="card"><p style="font-size:13px;color:var(--text3);text-align:center;padding:14px 0;">Your queue is empty.<br>Without one, an away pick uses the dynasty rankings instead.</p></div>';
+  } else {
+    html += '<div class="card">' + q.map((id,i) => {
+      const p = DS.rookies.find(r => r.id === id);
+      if(!p) return '';
+      const gone = taken.has(id);
+      return '<div class="q-row"' + (gone?' style="opacity:.35;"':'') + '>'
+        + '<span class="q-n">' + (i+1) + '</span>'
+        + '<span class="tag tag-' + p.pos + '">' + p.pos + '</span>'
+        + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">' + esc(p.name)
+        + (gone ? ' <span style="font-size:10px;color:var(--red);">TAKEN</span>' : '') + '</div>'
+        + '<div style="font-size:11px;color:var(--text2);">' + esc(p.nfl) + (p.rank?' &middot; #'+p.rank+' '+p.pr:'') + '</div></div>'
+        + '<button class="q-btn" onclick="queueMove(' + i + ',-1)">&#9650;</button>'
+        + '<button class="q-btn" onclick="queueMove(' + i + ',1)">&#9660;</button>'
+        + '<button class="q-btn" onclick="queueAdd(' + id + ')">&times;</button>'
+        + '</div>';
+    }).join('') + '</div>';
+  }
+  box.innerHTML = html;
+}
+
+// ===== AFTER YOU PICK: TELL THE GROUP =====
+function showNotifyPrompt(){
+  if(!DS) return;
+  const np = el('np'); if(!np) return;
+  const cur = DS.currentPickIdx;
+  const done = cur >= DS.picks.length;
+  const onClock = done ? null : DS.teams[DS.picks[cur].teamIdx];
+  const msg = pickBlurb();
+  np.innerHTML =
+    '<div class="np-check">&#9989;</div>' +
+    '<div class="np-h">Pick saved</div>' +
+    '<div class="np-sub">' +
+      (done ? 'That was the last pick &mdash; the draft is complete.'
+            : 'Now let <strong style="color:var(--accent);">' + esc(onClock.name) + '</strong> know they\'re up. ' +
+              'Nothing moves until someone tells them.') +
+    '</div>' +
+    '<div class="np-msg">' + esc(msg) + '</div>' +
+    '<div class="np-btns">' +
+      '<button class="btn btn-accent btn-lg" onclick="smsNotify()">&#128241; Text the group</button>' +
+      '<button class="btn" onclick="copyNotify()">&#128203; Copy message</button>' +
+      '<button class="btn btn-ghost" onclick="closeNotifyPrompt()">Skip</button>' +
+    '</div>';
+  const o = el('np-overlay'); if(o) o.classList.add('open');
+}
+
+function closeNotifyPrompt(){
+  const o = el('np-overlay'); if(o) o.classList.remove('open');
+}
+
+// ===== NOTIFYING THE NEXT MANAGER =====
+function pickBlurb(){
+  if(!DS) return '';
+  const cur = DS.currentPickIdx;
+  if(cur >= DS.picks.length) return 'The rookie draft is complete.';
+  const onClock = DS.teams[DS.picks[cur].teamIdx];
+  const last = cur > 0 ? DS.picks[cur-1] : null;
+  const lastPl = last && hasPick(last) ? DS.rookies.find(r => r.id === last.playerId) : null;
+  let s = '';
+  if(lastPl && last) s += DS.teams[last.teamIdx].name + ' took ' + lastPl.name + ' (' + lastPl.pos + ', ' + lastPl.nfl + '). ';
+  s += onClock.name + ' is on the clock — pick ' + (cur+1) + ' of ' + DS.picks.length + '.';
+  if(DS.pickMs && DS.deadline){
+    const left = DS.deadline - Date.now();
+    if(left > 0) s += ' ' + fmtLeft(left) + ' to pick or it auto-drafts.';
+  }
+  if(!DS.pickMs) s += ' No clock - pick whenever you get a chance.';
+  s += ' ' + location.href;
+  return s;
+}
+
+function renderNotifyBar(){
+  const bar = el('notify-bar');
+  if(!bar || !DS || DS.done) { if(bar) bar.classList.remove('on'); return; }
+  const cur = DS.currentPickIdx;
+  if(cur >= DS.picks.length){ bar.classList.remove('on'); return; }
+  const onClock = DS.teams[DS.picks[cur].teamIdx];
+  const mineNow = L.claimed !== null && onClock.id === L.claimed;
+  if(mineNow){ bar.classList.remove('on'); return; }
+  bar.classList.add('on');
+  bar.innerHTML = '<span class="notify-t">Waiting on <strong>' + esc(onClock.name) + '</strong>' +
+    (DS.pickMs ? '' : ' &mdash; no clock, so someone has to nudge them') + ':</span>'
+    + '<button class="btn btn-sm" onclick="smsNotify()">&#128241; Text the group</button>'
+    + '<button class="btn btn-sm" onclick="copyNotify()">&#128203; Copy message</button>';
+}
+
+function smsNotify(){
+  const body = encodeURIComponent(pickBlurb());
+  // works on both iOS and Android
+  const ua = navigator.userAgent || '';
+  const sep = /iPhone|iPad|iPod|Mac/i.test(ua) ? '&' : '?';
+  window.location.href = 'sms:' + sep + 'body=' + body;
+}
+
+async function copyNotify(){
+  const txt = pickBlurb();
+  try{
+    await navigator.clipboard.writeText(txt);
+    alert('Copied. Paste it into your group text.');
+  }catch(e){
+    prompt('Copy this into your group text:', txt);
+  }
+  closeNotifyPrompt();
+}
+
+// ===== OPTIONAL DISCORD WEBHOOK (fully automatic) =====
+function webhookUrl(){ return (DS && DS.webhook) || ''; }
+
+async function setWebhook(){
+  if(!DS) return;
+  const v = prompt('Paste a Discord webhook URL to post every pick automatically.\n\nDiscord: Server Settings > Integrations > Webhooks > New Webhook > Copy URL.\n\nLeave blank to turn off.', webhookUrl());
+  if(v === null) return;
+  DS.webhook = v.trim();
+  await saveDS();
+  openDraftSettings();
+  if(DS.webhook){
+    postWebhook('Rookie draft notifications are connected. ' + pickBlurb());
+    alert('Webhook saved. A test message was sent.');
+  }
+}
+
+async function postWebhook(text){
+  const url = webhookUrl();
+  if(!url) return;
+  try{
+    await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ content: text.slice(0,1900) })
+    });
+  }catch(e){}
 }
 
 // ===== LEAGUE CHAT =====
@@ -1577,6 +1848,15 @@ let L={
   ti:null,tmax:120,tleft:0,lastPick:-1,
 };
 
+function migrateDraft(){
+  if(!DS) return;
+  if(DS.pickMs === undefined){
+    DS.pickMs = (DS.timerSecs || 0) * 1000;
+    DS.deadline = DS.pickMs ? Date.now() + DS.pickMs : 0;
+  }
+  if(!DS.queues) DS.queues = {};
+}
+
 function hasPick(p){ return p && p.playerId !== null && p.playerId !== undefined; }
 
 function el(id){ return document.getElementById(id); }
@@ -1625,7 +1905,7 @@ window.addEventListener('error', function(ev){
     showNavButtons();
     setSS('live','Live');
     if(ex&&ex.started){
-      DS=ex;L.tmax=ex.timerSecs||120;
+      DS=ex;migrateDraft();
       resetTeams();enterDraft();
     } else {
       resetTeams();renderSetupPool();show('s-setup');
@@ -1648,7 +1928,7 @@ function startListening(){
   fbListener=fbRef.on('value',snap=>{
     const f=snap.val();if(!f)return;
     const changed=!DS||f.ts!==DS.ts||f.currentPickIdx!==DS.currentPickIdx;
-    DS=f;setSS('live','Live');
+    DS=f; migrateDraft();setSS('live','Live');
     if(changed)renderDraftFromDS();
   },()=>setSS('offline','Offline'));
 }
@@ -1713,7 +1993,9 @@ async function launchDraft(){
   const n=parseInt(document.getElementById('cfg-teams').value)||12;
   const rounds=parseInt(document.getElementById('cfg-rounds').value)||5;
   const type=document.getElementById('cfg-type').value;
-  const timer=parseInt(document.getElementById('cfg-timer').value)||0;
+  const timerVal=parseInt(document.getElementById('cfg-timer').value)||0;
+  const timerUnit=parseInt(document.getElementById('cfg-unit').value)||1000;
+  const pickMs=timerVal*timerUnit;
   const teams=Array.from({length:n},(_,i)=>({id:i,name:document.getElementById(`tn-${i}`)?.value||`Team ${i+1}`}));
   let picks;
   if(L.customPicks && L.customSig === setupSignature()){
@@ -1722,8 +2004,8 @@ async function launchDraft(){
     picks = buildOrder(n,rounds,type);
     picks.forEach(p=>{p.origTeamIdx=p.teamIdx;});
   }
-  DS={teams,picks,auto:{},autoOnExpire:true,rookies:L.rookies,timerSecs:timer,currentPickIdx:0,started:true,done:false,ts:Date.now()};
-  L.tmax=timer;L.lastPick=-1;
+  DS={teams,picks,auto:{},autoOnExpire:true,rookies:L.rookies,pickMs:pickMs,deadline:pickMs?Date.now()+pickMs:0,queues:{},currentPickIdx:0,started:true,done:false,ts:Date.now()};
+  L.lastPick=-1;
   await saveDS();enterDraft();
 }
 
@@ -1770,9 +2052,10 @@ function renderDraftFromDS(){
   } else {
     if(isMe && LAST_TURN !== cur){ LAST_TURN = cur; sndYourTurn(); }
     if(!isMe) LAST_TURN = -1;
-    if(DS.timerSecs>0&&L.lastPick!==cur){L.lastPick=cur;L.tleft=DS.timerSecs;L.tmax=DS.timerSecs;startTimer();}
+    if(DS.pickMs>0){ if(L.lastPick!==cur){L.lastPick=cur;LAST_TICK=-1;} startTimer(); }
   }
-  renderBoard(cur);renderPlayers();
+  renderBoard(cur);renderPlayers();renderNotifyBar();
+  if(TAB==='queue') renderQueue();
   maybeAutodraft();
 }
 function renderBoard(cur){
@@ -1819,6 +2102,7 @@ function renderPlayers(){
         <div class="prow-meta">${r.nfl} &middot; ${r.college} &middot; ${slot(r)}</div>
       </div>
       ${linkIcons(r)}
+      ${L.claimed!==null?`<button class="q-add ${myQueue().indexOf(r.id)>=0?'qd':''}" title="Add to your queue" onclick="queueAdd(${r.id})">${myQueue().indexOf(r.id)>=0?'&#10003;Q':'+Q'}</button>`:''}
       ${isMyTurn?`<button class="btn btn-sm btn-green" onclick="makePick(${r.id})">&#9654; ${mine?'Draft':'Pick for '+onClockTeam.name.slice(0,12)}</button>`:`<span style="font-size:11px;color:var(--text3);">Available</span>`}
     </div>`).join('')||'<p style="color:var(--text2);padding:12px 0;">No players match.</p>';
 }
@@ -1838,6 +2122,7 @@ async function makePick(playerId){
   sndPick();
   await commitPick(playerId, cur, false);
   showTab('board',document.querySelector('.tab'));
+  showNotifyPrompt();
 }
 
 function renderTeamView(){
@@ -1859,51 +2144,81 @@ function renderTeamView(){
 function showTab(name,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  ['board','players','teams'].forEach(t=>document.getElementById('tab-'+t).style.display=t===name?'block':'none');
+  TAB=name;
+  ['board','players','queue','teams'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===name?'block':'none';});
   if(name==='players')renderPlayers();
+  if(name==='queue')renderQueue();
   if(name==='teams')renderTeamView();
 }
 
 // ── TIMER ─────────────────────────────────────────────────────────────────
+function msLeft(){
+  if(!DS || !DS.pickMs || !DS.deadline) return null;
+  return DS.deadline - Date.now();
+}
+
+function fmtLeft(ms){
+  if(ms < 0) ms = 0;
+  const s = Math.floor(ms/1000);
+  const d = Math.floor(s/86400), hh = Math.floor(s%86400/3600), mm = Math.floor(s%3600/60), ss = s%60;
+  if(d > 0)  return d + 'd ' + hh + 'h';
+  if(hh > 0) return hh + 'h ' + String(mm).padStart(2,'0') + 'm';
+  if(mm > 0) return mm + 'm ' + String(ss).padStart(2,'0') + 's';
+  return ss + 's';
+}
+
 function startTimer(){
-  stopTimer();if(!DS||!DS.timerSecs)return;
-  document.getElementById('timer-wrap').style.display='block';
+  stopTimer();
+  if(!DS || !DS.pickMs) return;
+  const w = el('timer-wrap'); if(w) w.style.display='block';
   updateTimer();
-  L.ti=setInterval(()=>{
-    L.tleft--;
-    updateTimer();
-    if(L.tleft<=10 && L.tleft>0) sndTick(true);
-    else if(L.tleft<=30 && L.tleft>0 && L.tleft%5===0) sndTick(false);
-    if(L.tleft<=0){stopTimer();autoSkip();}
-  },1000);
+  L.ti = setInterval(updateTimer, 1000);
 }
+
 function updateTimer(){
-  document.getElementById('timer-txt').textContent=Math.max(0,L.tleft)+'s';
-  const pct=(L.tleft/L.tmax)*100;
-  const fill=document.getElementById('timer-fill');
-  fill.style.width=Math.max(0,pct)+'%';
-  fill.style.background=pct>33?'var(--accent)':'var(--red)';
+  const ms = msLeft();
+  if(ms === null){ stopTimer(); return; }
+  const t = el('timer-txt'); if(t) t.textContent = fmtLeft(ms);
+  const pct = Math.max(0, Math.min(100, (ms / DS.pickMs) * 100));
+  const fill = el('timer-fill');
+  if(fill){
+    fill.style.width = pct + '%';
+    fill.style.background = pct > 33 ? 'var(--accent)' : 'var(--red)';
+  }
+  // audible countdown only when the whole clock is short (live-style draft)
+  if(DS.pickMs <= 600000){
+    const s = Math.ceil(ms/1000);
+    if(s <= 10 && s > 0 && s !== LAST_TICK){ LAST_TICK = s; sndTick(true); }
+  }
+  if(ms <= 0){ stopTimer(); autoSkip(); }
 }
+
 async function autoSkip(){
-  if(!DS||DS.currentPickIdx>=DS.picks.length)return;
+  if(!DS || DS.currentPickIdx >= DS.picks.length || DS.paused) return;
   if(!isCommish()) return;   // only the commissioner device advances an expired clock
   const cur = DS.currentPickIdx;
+  const snap = await fbRef.once('value').catch(()=>null);
+  const fresh = snap ? snap.val() : null;
+  if(fresh && (fresh.currentPickIdx !== cur || (fresh.deadline && fresh.deadline > Date.now()))) return;
   if(DS.autoOnExpire !== false){
-    const pick = bestAvailable();
+    const pick = queuePick(DS.picks[cur].teamIdx) || bestAvailable();
     if(pick){ await commitPick(pick.id, cur, true); return; }
   }
   DS.currentPickIdx++;
-  if(DS.currentPickIdx>=DS.picks.length)DS.done=true;
-  L.lastPick=DS.currentPickIdx;
+  DS.deadline = DS.pickMs ? Date.now() + DS.pickMs : 0;
+  if(DS.currentPickIdx >= DS.picks.length) DS.done = true;
+  L.lastPick = DS.currentPickIdx;
   const tm = DS.teams[DS.picks[cur].teamIdx];
   if(tm) sysChat('Pick ' + (cur+1) + ': ' + tm.name + ' ran out of time and was skipped.');
-  await saveDS();renderDraftFromDS();
+  await saveDS(); renderDraftFromDS();
 }
 
 function stopTimer(){
-  if(L.ti)clearInterval(L.ti);L.ti=null;
-  const w=document.getElementById('timer-wrap');if(w)w.style.display='none';
+  if(L.ti) clearInterval(L.ti);
+  L.ti = null;
+  const w = el('timer-wrap'); if(w) w.style.display='none';
 }
+
 function goSetup(){stopTimer();if(fbListener&&fbRef)fbRef.off('value',fbListener);fbListener=null;resetTeams();renderSetupPool();show('s-setup');}
 function showAllTeams(){show('s-draft');showTab('teams',document.querySelectorAll('.tab')[2]);}
 </script>
