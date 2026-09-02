@@ -123,6 +123,30 @@ select option{background:var(--bg3);}
 .np-sub{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px;}
 .np-msg{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--text2);text-align:left;line-height:1.55;margin-bottom:16px;max-height:130px;overflow-y:auto;}
 .np-btns{display:flex;flex-direction:column;gap:8px;}
+.sheet-wrap{overflow-x:auto;border:1px solid var(--border2);border-radius:10px;background:var(--bg2);}
+table.sheet{border-collapse:collapse;width:100%;min-width:640px;font-size:12.5px;}
+table.sheet th{position:sticky;top:0;background:var(--bg3);font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--accent);text-align:left;padding:9px 10px;border-bottom:1px solid var(--border2);white-space:nowrap;z-index:2;}
+table.sheet td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+table.sheet tr:last-child td{border-bottom:none;}
+table.sheet tr.rd-start td{border-top:2px solid var(--border2);}
+table.sheet tr.now td{background:rgba(232,160,32,.10);}
+table.sheet tr.empty td{color:var(--text3);}
+table.sheet tr:hover td{background:var(--bg3);}
+.sh-pick{font-family:var(--fh);font-size:15px;font-weight:900;color:var(--text3);}
+.sh-team{font-weight:600;white-space:nowrap;}
+.sh-via{font-size:10px;color:var(--accent);font-family:var(--fh);font-weight:700;}
+.sh-player{font-weight:600;}
+.sh-sub{font-size:10.5px;color:var(--text2);}
+.sheet-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+#byname{background:linear-gradient(180deg,rgba(34,197,94,.10),rgba(34,197,94,.04));border:1px solid rgba(34,197,94,.35);border-radius:10px;padding:14px 16px;margin-bottom:14px;display:none;}
+#byname.on{display:block;}
+.bn-h{font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--green);margin-bottom:9px;}
+.bn-in{display:flex;gap:7px;}
+.bn-in input{flex:1;}
+.bn-sug{margin-top:9px;display:flex;flex-direction:column;gap:5px;}
+.bn-s{display:flex;align-items:center;gap:9px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;}
+.bn-s:hover{border-color:var(--green);}
+.bn-s.no{cursor:default;border-color:rgba(239,68,68,.35);}
 .notify-bar{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:none;align-items:center;gap:10px;flex-wrap:wrap;}
 .notify-bar.on{display:flex;}
 .notify-t{font-size:13px;color:var(--text);flex:1;min-width:180px;line-height:1.5;}
@@ -327,6 +351,7 @@ select option{background:var(--bg3);}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <div class="card-title" style="margin-bottom:0;">Pick Ownership &amp; Trades</div>
+      <button class="btn btn-sm" onclick="loadLeaguePreset();renderSetupPool();">&#8635; Load league order</button>
       <button class="btn btn-sm" onclick="openPickEditor('setup')">&#8646; Edit picks</button>
     </div>
     <p style="font-size:12px;color:var(--text2);line-height:1.6;">By default each team keeps its own picks in <span id="order-desc">snake</span> order. If picks were traded, reassign them here.</p>
@@ -354,10 +379,20 @@ select option{background:var(--bg3);}
     <div class="tab active" onclick="showTab('board',this)">Board</div>
     <div class="tab" onclick="showTab('players',this)">Available</div>
     <div class="tab" onclick="showTab('queue',this)">My Queue</div>
+    <div class="tab" onclick="showTab('sheet',this)">Sheet</div>
     <div class="tab" onclick="showTab('teams',this)">Teams</div>
   </div>
   <div id="tab-board"><div class="board-scroll" id="board-picks"></div></div>
   <div id="tab-players" style="display:none;">
+    <div id="byname">
+      <div class="bn-h">&#9654; Draft by name</div>
+      <div class="bn-in">
+        <input id="bn-input" placeholder="Type a player name and press Enter"
+               oninput="bnSuggest()" onkeydown="if(event.key==='Enter')bnDraft()">
+        <button class="btn btn-accent" onclick="bnDraft()">Draft</button>
+      </div>
+      <div class="bn-sug" id="bn-sug"></div>
+    </div>
     <div class="pills" id="draft-pills">
       <button class="pill active" onclick="setF('draft','ALL',this)">All</button>
       <button class="pill" onclick="setF('draft','QB',this)">QB</button>
@@ -374,6 +409,7 @@ select option{background:var(--bg3);}
     <div class="scrollbox" id="players-list"></div>
   </div>
   <div id="tab-queue" style="display:none;"></div>
+  <div id="tab-sheet" style="display:none;"></div>
   <div id="tab-teams" style="display:none;">
     <div class="field"><label class="lbl">View team roster</label>
       <select id="view-team" onchange="renderTeamView()" style="margin-bottom:14px;"></select>
@@ -420,6 +456,62 @@ select option{background:var(--bg3);}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
+// ── YOUR LEAGUE (2026 rookie draft order, trades included) ────────────────
+const LEAGUE_TEAMS = [
+  "Trust The Process",              // 0
+  "Steven's Phenomenal Team",       // 1
+  "Brandon's Nifty Team",           // 2
+  "Alex's Football Team",           // 3
+  "Jace's Not Agreeable Team",      // 4
+  "Arkansas Razorbacks",            // 5
+  "Williams You Be My Nabors",      // 6
+  "Brownie 3.0",                    // 7
+  "Dude Where's My Karlaftis?",     // 8
+  "Comissioner TBD",                // 9
+  "Benjamin Shield's Unreal Team",  // 10
+  "Flowerpuff Girls"                // 11
+];
+const LEAGUE_ROUNDS = 4;
+const LEAGUE_ORDER_TYPE = 'linear';   // same order every round
+// overall pick number -> team index that now owns it (only picks that were traded)
+const LEAGUE_TRADES = {
+  7:  1,   // Williams -> Steven's
+  10: 2,   // Comissioner TBD -> Brandon's
+  12: 1,   // Flowerpuff -> Steven's
+  19: 9,   // Williams -> Comissioner TBD
+  22: 4,   // Comissioner TBD -> Jace's
+  31: 1    // Williams -> Steven's
+};
+
+function leaguePicks(){
+  const picks = [];
+  for(let r = 0; r < LEAGUE_ROUNDS; r++){
+    for(let t = 0; t < LEAGUE_TEAMS.length; t++){
+      const num = picks.length + 1;
+      picks.push({
+        round: r + 1,
+        teamIdx: (LEAGUE_TRADES[num] !== undefined) ? LEAGUE_TRADES[num] : t,
+        origTeamIdx: t,
+        pickNum: num,
+        playerId: null
+      });
+    }
+  }
+  return picks;
+}
+
+function loadLeaguePreset(){
+  const tEl = el('cfg-teams'), rEl = el('cfg-rounds'), uEl = el('cfg-type');
+  if(tEl) tEl.value = LEAGUE_TEAMS.length;
+  if(rEl) rEl.value = LEAGUE_ROUNDS;
+  if(uEl) uEl.value = LEAGUE_ORDER_TYPE;
+  resetTeams();
+  LEAGUE_TEAMS.forEach((n,i) => { const e = el('tn-'+i); if(e) e.value = n; });
+  L.customPicks = leaguePicks();
+  L.customSig = setupSignature();
+  updateTradeSummary();
+}
+
 // ── COMMISSIONER PIN ──────────────────────────────────────────────────────
 // Change this value to change the PIN for your league.
 const COMMISH_PIN = '1309';
@@ -1140,6 +1232,113 @@ async function saveTeamNames(){
   closeDraftSettings();
 }
 
+// ===== LIVE SHEET VIEW =====
+function renderSheet(){
+  const box = el('tab-sheet');
+  if(!box || !DS) return;
+  const cur = DS.currentPickIdx;
+  const n = DS.teams.length;
+  let rows = '';
+  DS.picks.forEach((p,i) => {
+    const pl = hasPick(p) ? DS.rookies.find(r => r.id === p.playerId) : null;
+    const traded = p.origTeamIdx !== undefined && p.origTeamIdx !== p.teamIdx;
+    const isNow = i === cur;
+    const slotLbl = p.round + '.' + String((i % n) + 1).padStart(2,'0');
+    const cls = [(i % n === 0 ? 'rd-start' : ''), (isNow ? 'now' : ''), (!pl ? 'empty' : '')].filter(Boolean).join(' ');
+    rows += '<tr class="' + cls + '">'
+      + '<td><span class="sh-pick">' + p.pickNum + '</span></td>'
+      + '<td class="sh-sub">' + slotLbl + '</td>'
+      + '<td><div class="sh-team">' + esc(DS.teams[p.teamIdx].name) + '</div>'
+      + (traded ? '<div class="sh-via">via ' + esc(DS.teams[p.origTeamIdx].name) + '</div>' : '') + '</td>'
+      + '<td>' + (pl
+          ? '<div class="sh-player">' + esc(pl.name) + (p.auto ? ' <span class="sh-via">AUTO</span>' : '') + '</div>'
+            + '<div class="sh-sub">' + esc(pl.college) + '</div>'
+          : (isNow ? '<span style="color:var(--accent);font-weight:700;">ON THE CLOCK</span>' : '&mdash;')) + '</td>'
+      + '<td>' + (pl ? '<span class="tag tag-' + pl.pos + '">' + pl.pos + '</span>' : '') + '</td>'
+      + '<td class="sh-sub">' + (pl ? esc(pl.nfl) : '') + '</td>'
+      + '<td class="sh-sub">' + (pl && pl.rank ? '#' + pl.rank + ' ' + pl.pr : '') + '</td>'
+      + '</tr>';
+  });
+  const made = DS.picks.filter(hasPick).length;
+  box.innerHTML =
+    '<div class="sheet-bar">'
+    + '<span style="font-size:12px;color:var(--text2);flex:1;">Full draft board &mdash; ' + made + ' of ' + DS.picks.length + ' picks made. Updates live.</span>'
+    + '<button class="btn btn-sm" onclick="exportCSV()">&#11015; Export to Excel</button>'
+    + '</div>'
+    + '<div class="sheet-wrap"><table class="sheet">'
+    + '<thead><tr><th>#</th><th>Slot</th><th>Team</th><th>Player</th><th>Pos</th><th>NFL</th><th>Rank</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div>';
+}
+
+// ===== DRAFT BY NAME =====
+function bnNorm(s){
+  return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+
+function bnAvailable(){
+  if(!DS) return [];
+  const taken = new Set(DS.picks.filter(hasPick).map(p => p.playerId));
+  return DS.rookies.filter(r => !taken.has(r.id));
+}
+
+function bnMatches(q){
+  const n = bnNorm(q);
+  if(!n) return [];
+  const pool = bnAvailable();
+  const starts = [], contains = [];
+  pool.forEach(p => {
+    const full = bnNorm(p.name);
+    const last = bnNorm(p.name.split(' ').slice(-1)[0]);
+    if(full.startsWith(n) || last.startsWith(n)) starts.push(p);
+    else if(full.includes(n)) contains.push(p);
+  });
+  const rank = (a,b) => (a.rank||999)-(b.rank||999) || a.name.localeCompare(b.name);
+  return starts.sort(rank).concat(contains.sort(rank));
+}
+
+function bnSuggest(){
+  const box = el('bn-sug'); if(!box) return;
+  const q = (el('bn-input') || {}).value || '';
+  if(!q.trim()){ box.innerHTML = ''; return; }
+  const m = bnMatches(q);
+  if(!m.length){
+    // is it someone already drafted?
+    const gone = DS.rookies.find(r => bnNorm(r.name).includes(bnNorm(q)));
+    box.innerHTML = gone
+      ? '<div class="bn-s no"><span class="tag tag-'+gone.pos+'">'+gone.pos+'</span>'
+        + '<span style="flex:1;font-size:13px;">'+esc(gone.name)+' is already drafted</span></div>'
+      : '<div class="bn-s no"><span style="flex:1;font-size:13px;color:var(--text3);">No available player matches that name</span></div>';
+    return;
+  }
+  box.innerHTML = m.slice(0,5).map(p =>
+    '<div class="bn-s" onclick="bnPick('+p.id+')">'
+    + '<span class="tag tag-'+p.pos+'">'+p.pos+'</span>'
+    + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">'+esc(p.name)
+    + (p.rank?' <span class="rank-chip">#'+p.rank+' '+p.pr+'</span>':'') + '</div>'
+    + '<div style="font-size:11px;color:var(--text2);">'+esc(p.nfl)+' &middot; '+esc(p.college)+'</div></div>'
+    + '<span style="font-size:11px;color:var(--green);font-weight:700;">DRAFT</span></div>'
+  ).join('');
+}
+
+function bnPick(id){
+  const inp = el('bn-input'); if(inp) inp.value = '';
+  const box = el('bn-sug'); if(box) box.innerHTML = '';
+  makePick(id);
+}
+
+function bnDraft(){
+  const q = (el('bn-input') || {}).value || '';
+  if(!q.trim()) return;
+  const m = bnMatches(q);
+  if(!m.length){ bnSuggest(); return; }
+  if(m.length > 1 && bnNorm(m[0].name) !== bnNorm(q)){
+    // more than one candidate - make them choose
+    bnSuggest();
+    return;
+  }
+  bnPick(m[0].id);
+}
+
 // ===== PERSONAL DRAFT QUEUE =====
 let TAB = 'board';
 
@@ -1590,45 +1789,79 @@ function csvCell(v){
 
 function exportCSV(){
   if(!DS){ alert('No draft to export yet.'); return; }
-  const rows = [];
-  rows.push(['Overall Pick','Round','Slot','Team','Player','Pos','NFL Team','College','NFL Draft','Dynasty Rank','Traded From']);
   const n = DS.teams.length;
+  const rows = [];
+
+  rows.push(['2026 DYNASTY ROOKIE DRAFT']);
+  rows.push(['Exported', new Date().toLocaleString()]);
+  rows.push(['Picks made', DS.picks.filter(hasPick).length + ' of ' + DS.picks.length]);
+  rows.push([]);
+
+  rows.push(['FULL DRAFT BOARD']);
+  rows.push(['Overall','Round','Slot','Team','Acquired From','Player','Pos','NFL Team','College','NFL Draft Slot','Dynasty Rank','Pos Rank','Auto']);
   DS.picks.forEach((p,i) => {
     const pl = hasPick(p) ? DS.rookies.find(r => r.id === p.playerId) : null;
-    const slot = p.round + '.' + String(i % n + 1).padStart(2,'0');
-    const traded = (p.origTeamIdx !== undefined && p.origTeamIdx !== p.teamIdx)
-      ? DS.teams[p.origTeamIdx].name : '';
+    const traded = p.origTeamIdx !== undefined && p.origTeamIdx !== p.teamIdx;
     rows.push([
-      p.pickNum, p.round, slot,
+      p.pickNum, p.round, p.round + '.' + String((i % n) + 1).padStart(2,'0'),
       DS.teams[p.teamIdx].name,
-      pl ? pl.name : '(no pick)',
+      traded ? DS.teams[p.origTeamIdx].name : '',
+      pl ? pl.name : '',
       pl ? pl.pos : '',
       pl ? pl.nfl : '',
       pl ? pl.college : '',
-      pl ? (pl.udfa ? 'UDFA' : (pl.su ? 'Late round' : 'Rd '+pl.rd+' Pk '+pl.pk)) : '',
-      pl && pl.rank ? '#'+pl.rank+' '+pl.pr : '',
-      traded
+      pl ? (pl.udfa ? 'UDFA' : (pl.su || !pl.pk ? 'Late round' : 'Rd ' + pl.rd + ' Pk ' + pl.pk)) : '',
+      pl && pl.rank ? pl.rank : '',
+      pl && pl.pr ? pl.pr : '',
+      p.auto ? 'AUTO' : ''
     ]);
   });
-  // blank line, then roster-by-team summary
+
   rows.push([]);
-  rows.push(['ROSTER SUMMARY BY TEAM']);
-  rows.push(['Team','Player','Pos','NFL Team','Round','Overall Pick']);
+  rows.push(['ROSTERS BY TEAM']);
+  rows.push(['Team','Total Picks','Overall','Round','Player','Pos','NFL Team','Dynasty Rank']);
   DS.teams.forEach(t => {
-    const mine = DS.picks.filter(p => p.teamIdx === t.id && hasPick(p));
-    if(!mine.length){ rows.push([t.name,'(no picks made)','','','','']); return; }
-    mine.forEach(p => {
+    const owned = DS.picks.filter(p => p.teamIdx === t.id);
+    const made  = owned.filter(hasPick);
+    if(!made.length){
+      rows.push([t.name, owned.length, '', '', '(no picks made yet)', '', '', '']);
+      return;
+    }
+    made.forEach((p,idx) => {
       const pl = DS.rookies.find(r => r.id === p.playerId);
-      rows.push([t.name, pl?pl.name:'', pl?pl.pos:'', pl?pl.nfl:'', p.round, p.pickNum]);
+      rows.push([
+        idx === 0 ? t.name : '',
+        idx === 0 ? owned.length : '',
+        p.pickNum, p.round,
+        pl ? pl.name : '', pl ? pl.pos : '', pl ? pl.nfl : '',
+        pl && pl.rank ? pl.rank : ''
+      ]);
     });
   });
+
+  rows.push([]);
+  rows.push(['PICK OWNERSHIP SUMMARY']);
+  rows.push(['Team','Picks Owned','Pick Numbers']);
+  DS.teams.forEach(t => {
+    const owned = DS.picks.filter(p => p.teamIdx === t.id).map(p => p.pickNum);
+    rows.push([t.name, owned.length, owned.join(' / ')]);
+  });
+
+  rows.push([]);
+  rows.push(['BEST PLAYERS STILL AVAILABLE']);
+  rows.push(['Dynasty Rank','Player','Pos','NFL Team','College']);
+  const taken = new Set(DS.picks.filter(hasPick).map(p => p.playerId));
+  DS.rookies.filter(r => !taken.has(r.id))
+    .sort((a,b) => (a.rank||999)-(b.rank||999) || a.name.localeCompare(b.name))
+    .slice(0,25)
+    .forEach(r => rows.push([r.rank || '', r.name, r.pos, r.nfl, r.college]));
 
   const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
   const stamp = new Date().toISOString().slice(0,10);
   const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'rookie-draft-results-' + stamp + '.csv';
+  a.download = 'rookie-draft-' + stamp + '.csv';
   document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
@@ -1655,7 +1888,7 @@ async function resetDraft(){
   LAST_TURN = -1; LAST_TICK = -1;
   L.rookies = DEFAULT_ROOKIES.map(r => ({...r}));
   hideNavButtons();
-  resetTeams(); renderSetupPool(); updateTradeSummary();
+  loadLeaguePreset(); renderSetupPool();
   show('s-setup');
   setSS('live','Live');
 }
@@ -1831,7 +2064,11 @@ function fmtDate(s){
 }
 
 function byBoard(a,b){if(!!a.udfa!==!!b.udfa)return a.udfa?1:-1;if(a.udfa)return a.name.localeCompare(b.name);return a.pk-b.pk;}
-function slot(r){return r.udfa?'<span class="udfa-tag">UDFA</span>':`Rd ${r.rd}, Pk ${r.pk}`;}
+function slot(r){
+  if(r.udfa) return '<span class="udfa-tag">UDFA</span>';
+  if(r.su || !r.pk) return '<span class="udfa-tag">LATE RD</span>';
+  return `Rd ${r.rd}, Pk ${r.pk}`;
+}
 function linkIcons(r){
   const a=[];
   if(r.pfr)a.push(`<a class="plink" href="${r.pfr}" target="_blank" rel="noopener" title="NFL page &amp; photo" onclick="event.stopPropagation()">PRO</a>`);
@@ -1908,7 +2145,7 @@ window.addEventListener('error', function(ev){
       DS=ex;migrateDraft();
       resetTeams();enterDraft();
     } else {
-      resetTeams();renderSetupPool();show('s-setup');
+      loadLeaguePreset();renderSetupPool();show('s-setup');
     }
   }).catch(e=>{
     showFbError(e);
@@ -2056,6 +2293,7 @@ function renderDraftFromDS(){
   }
   renderBoard(cur);renderPlayers();renderNotifyBar();
   if(TAB==='queue') renderQueue();
+  if(TAB==='sheet') renderSheet();
   maybeAutodraft();
 }
 function renderBoard(cur){
@@ -2093,6 +2331,7 @@ function renderPlayers(){
   const asCommish = !mine && isCommish() && onClockTeam;
   const isMyTurn = !DS.paused && cur<DS.picks.length && (mine || asCommish);
   const avail=filt(DS.rookies,L.df,document.getElementById('draft-search')?.value||'').filter(r=>!pickedIds.has(r.id)).sort(byBoard);
+  const bn = el('byname'); if(bn) bn.classList.toggle('on', !!isMyTurn);
   document.getElementById('players-list').innerHTML=avail.map((r,i)=>`
     <div class="prow">
       <span class="prow-rank">${i+1}</span>
@@ -2145,9 +2384,10 @@ function showTab(name,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if(btn)btn.classList.add('active');
   TAB=name;
-  ['board','players','queue','teams'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===name?'block':'none';});
+  ['board','players','queue','sheet','teams'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===name?'block':'none';});
   if(name==='players')renderPlayers();
   if(name==='queue')renderQueue();
+  if(name==='sheet')renderSheet();
   if(name==='teams')renderTeamView();
 }
 
