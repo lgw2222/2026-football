@@ -147,6 +147,8 @@ table.sheet tr:hover td{background:var(--bg3);}
 .bn-s{display:flex;align-items:center;gap:9px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;}
 .bn-s:hover{border-color:var(--green);}
 .bn-s.no{cursor:default;border-color:rgba(239,68,68,.35);}
+#stale-bar{background:rgba(232,160,32,.13);border:1px solid rgba(232,160,32,.45);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:none;align-items:center;gap:12px;flex-wrap:wrap;}
+#stale-bar.on{display:flex;}
 .notify-bar{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:none;align-items:center;gap:10px;flex-wrap:wrap;}
 .notify-bar.on{display:flex;}
 .notify-t{font-size:13px;color:var(--text);flex:1;min-width:180px;line-height:1.5;}
@@ -363,6 +365,7 @@ table.sheet tr:hover td{background:var(--bg3);}
 
 <!-- DRAFT -->
 <div id="s-draft" class="screen">
+  <div id="stale-bar"></div>
   <div class="notify-bar" id="notify-bar"></div>
   <div id="paused-bar"><span class="paused-t">&#10074;&#10074; Draft paused</span><span style="font-size:12px;color:var(--text2);flex:1;">The clock is stopped for everyone. Hit Resume to continue.</span></div>
   <div class="stat-grid" id="draft-stats"></div>
@@ -1132,6 +1135,8 @@ function openDraftSettings(){
         DS.teams.map((t,i) => '<input type="text" id="ds-tn-' + i + '" value="' + esc(t.name) + '">').join('') +
       '</div>' +
       '<button class="btn btn-accent btn-sm" style="margin-top:10px;" onclick="saveTeamNames()">Save team names</button>' +
+      '<button class="btn btn-sm" style="margin-top:10px;margin-left:8px;" onclick="closeDraftSettings();refreshLeagueData();">Reload league teams &amp; picks</button>' +
+      '<div class="ds-note">Reload pulls the 12 real team names, the 48-pick order with trades, and the current 134-player rookie pool.</div>' +
     '</div>' +
 
     '<div class="ds-sec"><div class="ds-h">Autodraft</div>' +
@@ -1230,6 +1235,35 @@ async function saveTeamNames(){
   populateClaimSelect();
   renderDraftFromDS();
   closeDraftSettings();
+}
+
+// ===== REFRESHING A RUNNING DRAFT WITH THE LATEST LEAGUE DATA =====
+function renderStaleBar(){
+  const bar = el('stale-bar');
+  if(!bar) return;
+  if(!STALE_WARN || !isCommish()){ bar.classList.remove('on'); return; }
+  bar.classList.add('on');
+  bar.innerHTML = '<span style="flex:1;min-width:200px;font-size:13px;line-height:1.5;">'
+    + 'This draft is running on older data &mdash; the real team names, pick order and updated rookie pool are not loaded.'
+    + '</span>'
+    + '<button class="btn btn-sm btn-accent" onclick="refreshLeagueData()">Load league data</button>';
+}
+
+async function refreshLeagueData(){
+  if(!DS) return;
+  const made = DS.picks.filter(hasPick).length;
+  const msg = made
+    ? 'Load the real teams, pick order and updated rookie pool?\n\n'
+      + made + ' pick' + (made===1?'':'s') + ' already made will be carried over where the player still exists.\n\n'
+      + 'If anything looks wrong afterwards, use Reset for a clean start.'
+    : 'Load the real teams, pick order and updated rookie pool?';
+  if(!confirm(msg)) return;
+  applyLeagueData(true);
+  STALE_WARN = false;
+  await saveDS();
+  populateClaimSelect();
+  renderDraftFromDS();
+  alert('Loaded: ' + DS.teams.length + ' teams, ' + DS.picks.length + ' picks, ' + DS.rookies.length + ' players.');
 }
 
 // ===== LIVE SHEET VIEW =====
@@ -2085,6 +2119,41 @@ let L={
   ti:null,tmax:120,tleft:0,lastPick:-1,
 };
 
+function leagueTeamObjs(){
+  return LEAGUE_TEAMS.map((n,i) => ({ id:i, name:n }));
+}
+
+function draftIsStale(){
+  if(!DS) return false;
+  // different team count, generic names, or an out-of-date rookie pool
+  if(!DS.teams || DS.teams.length !== LEAGUE_TEAMS.length) return true;
+  const namesMatch = DS.teams.every((t,i) => t.name === LEAGUE_TEAMS[i]);
+  if(!namesMatch) return true;
+  if(!DS.picks || DS.picks.length !== LEAGUE_TEAMS.length * LEAGUE_ROUNDS) return true;
+  if(!DS.rookies || DS.rookies.length !== DEFAULT_ROOKIES.length) return true;
+  if(DS.rookies[0] && DS.rookies[0].rank === undefined) return true;
+  return false;
+}
+
+function applyLeagueData(keepPicks){
+  if(!DS) return;
+  const madeBefore = DS.picks ? DS.picks.filter(hasPick) : [];
+  DS.teams   = leagueTeamObjs();
+  DS.rookies = DEFAULT_ROOKIES.map(r => ({...r}));
+  const fresh = leaguePicks();
+  if(keepPicks && madeBefore.length){
+    // carry over any selections whose player still exists in the new pool
+    madeBefore.forEach(old => {
+      const slot = fresh[old.pickNum - 1];
+      if(slot && DS.rookies.some(r => r.id === old.playerId)) slot.playerId = old.playerId;
+    });
+  }
+  DS.picks = fresh;
+  if(!keepPicks) DS.currentPickIdx = 0;
+  else DS.currentPickIdx = Math.max(0, fresh.filter(hasPick).length);
+  DS.done = false;
+}
+
 function migrateDraft(){
   if(!DS) return;
   if(DS.pickMs === undefined){
@@ -2092,7 +2161,22 @@ function migrateDraft(){
     DS.deadline = DS.pickMs ? Date.now() + DS.pickMs : 0;
   }
   if(!DS.queues) DS.queues = {};
+  if(!DS.auto) DS.auto = {};
+
+  // A running draft still holding old data: refresh it.
+  if(draftIsStale()){
+    const made = DS.picks ? DS.picks.filter(hasPick).length : 0;
+    if(made === 0){
+      applyLeagueData(false);
+      DS.ts = Date.now();
+      if(fbRef) fbRef.set(DS).catch(()=>{});
+    } else {
+      STALE_WARN = true;
+    }
+  }
 }
+
+let STALE_WARN = false;
 
 function hasPick(p){ return p && p.playerId !== null && p.playerId !== undefined; }
 
@@ -2291,7 +2375,7 @@ function renderDraftFromDS(){
     if(!isMe) LAST_TURN = -1;
     if(DS.pickMs>0){ if(L.lastPick!==cur){L.lastPick=cur;LAST_TICK=-1;} startTimer(); }
   }
-  renderBoard(cur);renderPlayers();renderNotifyBar();
+  renderBoard(cur);renderPlayers();renderNotifyBar();renderStaleBar();
   if(TAB==='queue') renderQueue();
   if(TAB==='sheet') renderSheet();
   maybeAutodraft();
