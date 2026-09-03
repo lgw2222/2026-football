@@ -52,6 +52,8 @@ select option{background:var(--bg3);}
 .pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
 .pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border2);cursor:pointer;background:transparent;color:var(--text2);font-family:var(--fb);transition:all .15s;}
 .pill:hover{border-color:var(--accent);color:var(--accent);}
+.sort-sel{width:auto;padding:5px 10px;font-size:12px;border-radius:20px;background:transparent;border:1px solid var(--border2);color:var(--text2);cursor:pointer;}
+.sort-sel:focus{border-color:var(--accent);}
 .pill.active{background:var(--accent);color:#000;border-color:var(--accent);}
 .sbar{position:relative;margin-bottom:12px;}
 .sbar svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);width:15px;height:15px;}
@@ -343,6 +345,7 @@ table.sheet tr:hover td{background:var(--bg3);}
       <button class="pill" onclick="setF('setup','TE',this)">TE</button>
       <button class="pill" onclick="setF('setup','DRAFTED',this)">Drafted</button>
       <button class="pill" onclick="setF('setup','UDFA',this)">UDFA</button>
+      <span id="setup-sort"></span>
     </div>
     <div class="sbar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -404,10 +407,14 @@ table.sheet tr:hover td{background:var(--bg3);}
       <button class="pill" onclick="setF('draft','TE',this)">TE</button>
       <button class="pill" onclick="setF('draft','DRAFTED',this)">Drafted</button>
       <button class="pill" onclick="setF('draft','UDFA',this)">UDFA</button>
+      <span id="draft-sort"></span>
     </div>
-    <div class="sbar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input id="draft-search" placeholder="Search available players..." oninput="renderPlayers()">
+    <div style="display:flex;gap:7px;align-items:center;margin-bottom:12px;">
+      <div class="sbar" style="flex:1;margin-bottom:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="draft-search" placeholder="Search available players..." oninput="renderPlayers()">
+      </div>
+      <button class="btn btn-sm" onclick="addPlayerLive()" title="Add a player who is missing from the pool">+ Add player</button>
     </div>
     <div class="scrollbox" id="players-list"></div>
   </div>
@@ -1336,12 +1343,16 @@ function bnSuggest(){
   if(!q.trim()){ box.innerHTML = ''; return; }
   const m = bnMatches(q);
   if(!m.length){
-    // is it someone already drafted?
     const gone = DS.rookies.find(r => bnNorm(r.name).includes(bnNorm(q)));
-    box.innerHTML = gone
-      ? '<div class="bn-s no"><span class="tag tag-'+gone.pos+'">'+gone.pos+'</span>'
-        + '<span style="flex:1;font-size:13px;">'+esc(gone.name)+' is already drafted</span></div>'
-      : '<div class="bn-s no"><span style="flex:1;font-size:13px;color:var(--text3);">No available player matches that name</span></div>';
+    if(gone){
+      box.innerHTML = '<div class="bn-s no"><span class="tag tag-'+gone.pos+'">'+gone.pos+'</span>'
+        + '<span style="flex:1;font-size:13px;">'+esc(gone.name)+' is already drafted</span></div>';
+    } else {
+      box.innerHTML = '<div class="bn-s no"><span style="flex:1;font-size:13px;color:var(--text3);">'
+        + '&ldquo;' + esc(q.trim()) + '&rdquo; is not in the player pool.</span></div>'
+        + '<button class="btn btn-sm btn-accent" style="margin-top:7px;width:100%;justify-content:center;" '
+        + 'onclick="addAndDraft()">+ Add ' + esc(q.trim()) + ' and draft them</button>';
+    }
     return;
   }
   box.innerHTML = m.slice(0,5).map(p =>
@@ -1371,6 +1382,55 @@ function bnDraft(){
     return;
   }
   bnPick(m[0].id);
+}
+
+function nextRookieId(){
+  let max = 0;
+  (DS ? DS.rookies : DEFAULT_ROOKIES).forEach(r => { if(r.id > max) max = r.id; });
+  return max + 1;
+}
+
+async function addAndDraft(){
+  if(!DS) return;
+  const raw = (el('bn-input') || {}).value || '';
+  const name = raw.trim();
+  if(!name) return;
+
+  const pos = (prompt('Position for ' + name + '?  (QB, RB, WR or TE)', 'WR') || '').trim().toUpperCase();
+  if(!['QB','RB','WR','TE'].includes(pos)){
+    if(pos) alert('Position must be QB, RB, WR or TE.');
+    return;
+  }
+  const nfl = (prompt('NFL team for ' + name + '? (optional)', '') || '').trim() || 'Unknown';
+  const college = (prompt('College? (optional)', '') || '').trim();
+
+  const player = {
+    id: nextRookieId(), name, pos, nfl, college,
+    rd: 0, pk: 0, udfa: true, su: false,
+    rank: null, pr: null, proj: null, pn: null, pfr: null, cfb: null,
+    added: true
+  };
+  DS.rookies.push(player);
+  await saveDS();
+
+  const inp = el('bn-input'); if(inp) inp.value = '';
+  const box = el('bn-sug'); if(box) box.innerHTML = '';
+
+  if(confirm('Added ' + name + ' (' + pos + ', ' + nfl + ').\n\nDraft them with this pick now?')){
+    makePick(player.id);
+  } else {
+    renderPlayers();
+    sysChat(name + ' (' + pos + ') was added to the player pool.');
+  }
+}
+
+async function addPlayerLive(){
+  if(!DS) return;
+  const name = (prompt('Player name to add to the pool:') || '').trim();
+  if(!name) return;
+  const inp = el('bn-input');
+  if(inp) inp.value = name;
+  await addAndDraft();
 }
 
 // ===== PERSONAL DRAFT QUEUE =====
@@ -2097,8 +2157,51 @@ function fmtDate(s){
   }catch(e){ return ''; }
 }
 
-function byBoard(a,b){if(!!a.udfa!==!!b.udfa)return a.udfa?1:-1;if(a.udfa)return a.name.localeCompare(b.name);return a.pk-b.pk;}
+let SORT = localStorage.getItem('dd_sort') || 'nfl';
+
+// group: 0 = drafted with a known pick, 1 = late-round (pick unknown), 2 = undrafted
+function sortGroup(p){
+  if(p.udfa) return 2;
+  if(p.su || !p.pk) return 1;
+  return 0;
+}
+
+function byBoard(a,b){
+  if(SORT === 'name') return a.name.localeCompare(b.name);
+
+  if(SORT === 'rank'){
+    const ar = a.rank || 9999, br = b.rank || 9999;
+    if(ar !== br) return ar - br;
+    // unranked fall back to NFL draft order
+    const ga = sortGroup(a), gb = sortGroup(b);
+    if(ga !== gb) return ga - gb;
+    if(ga === 0) return a.pk - b.pk;
+    return a.name.localeCompare(b.name);
+  }
+
+  // default: NFL draft order
+  const ga = sortGroup(a), gb = sortGroup(b);
+  if(ga !== gb) return ga - gb;
+  if(ga === 0) return a.pk - b.pk;
+  return a.name.localeCompare(b.name);
+}
+
+function setSort(v){
+  SORT = v;
+  localStorage.setItem('dd_sort', v);
+  renderPlayers();
+  renderSetupPool();
+}
+
+function sortSelect(){
+  return '<select class="sort-sel" onchange="setSort(this.value)">'
+    + [['nfl','Sort: NFL draft order'],['rank','Sort: dynasty rank'],['name','Sort: name A-Z']]
+        .map(o => '<option value="'+o[0]+'"'+(SORT===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')
+    + '</select>';
+}
+
 function slot(r){
+  if(r.added) return '<span class="udfa-tag">ADDED</span>';
   if(r.udfa) return '<span class="udfa-tag">UDFA</span>';
   if(r.su || !r.pk) return '<span class="udfa-tag">LATE RD</span>';
   return `Rd ${r.rd}, Pk ${r.pk}`;
@@ -2280,12 +2383,13 @@ function filt(src,f,s){
 function renderSetupPool(){
   const list=filt(L.rookies,L.sf,document.getElementById('setup-search')?.value||'').sort(byBoard);
   document.getElementById('pool-ct').textContent=`(${L.rookies.length})`;
+  const ss = el('setup-sort'); if(ss && !ss.querySelector('select')) ss.innerHTML = sortSelect();
   document.getElementById('setup-pool').innerHTML=list.map((r,i)=>`
     <div class="prow">
       <span class="prow-rank">${i+1}</span>
       <span class="tag tag-${r.pos}">${r.pos}</span>
       <div class="prow-info">
-        <div class="prow-name" onclick="openPlayer(${r.id},event)">${r.name}${r.rank?`<span class="rank-chip">#${r.rank} ${r.pr}</span>`:''}</div>
+        <div class="prow-name" onclick="openPlayer(${r.id},event)">${r.name}${r.rank?`<span class="rank-chip" title="Dynasty rookie ranking (SI, Jul 30 2026)">#${r.rank} ${r.pr}</span>`:''}</div>
         <div class="prow-meta">${r.nfl} &middot; ${r.college} &middot; ${slot(r)}</div>
       </div>
       ${linkIcons(r)}
@@ -2416,12 +2520,13 @@ function renderPlayers(){
   const isMyTurn = !DS.paused && cur<DS.picks.length && (mine || asCommish);
   const avail=filt(DS.rookies,L.df,document.getElementById('draft-search')?.value||'').filter(r=>!pickedIds.has(r.id)).sort(byBoard);
   const bn = el('byname'); if(bn) bn.classList.toggle('on', !!isMyTurn);
+  const ds = el('draft-sort'); if(ds && !ds.querySelector('select')) ds.innerHTML = sortSelect();
   document.getElementById('players-list').innerHTML=avail.map((r,i)=>`
     <div class="prow">
       <span class="prow-rank">${i+1}</span>
       <span class="tag tag-${r.pos}">${r.pos}</span>
       <div class="prow-info">
-        <div class="prow-name" onclick="openPlayer(${r.id},event)">${r.name}${r.rank?`<span class="rank-chip">#${r.rank} ${r.pr}</span>`:''}</div>
+        <div class="prow-name" onclick="openPlayer(${r.id},event)">${r.name}${r.rank?`<span class="rank-chip" title="Dynasty rookie ranking (SI, Jul 30 2026)">#${r.rank} ${r.pr}</span>`:''}</div>
         <div class="prow-meta">${r.nfl} &middot; ${r.college} &middot; ${slot(r)}</div>
       </div>
       ${linkIcons(r)}
